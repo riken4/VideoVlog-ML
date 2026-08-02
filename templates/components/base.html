@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Social Network{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-[#f0f2f5] font-sans text-[#050505]">
+    {% if user.is_authenticated %}
+    <nav class="sticky top-0 z-40 bg-white shadow-sm px-2 sm:px-4 py-2">
+        <div class="container mx-auto flex items-center justify-between">
+            <a class="text-2xl font-bold text-[#1877f2] flex items-center gap-2" href="{% url 'home' %}">
+                <i class="fas fa-share-alt"></i> Video Vlog
+            </a>
+
+            <!-- Mobile toggle -->
+            <button class="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg text-[#65676b] hover:bg-[#f0f2f5]"
+                    id="navbarToggler" onclick="document.getElementById('navbarNav').classList.toggle('hidden')">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="hidden lg:flex items-center" id="navbarNav">
+                <ul class="flex items-center gap-1">
+                    <li>
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="{% url 'home' %}">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                    <li class="relative">
+                        <a class="relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="#" id="notificationBtn">
+                            <i class="fas fa-bell"></i>
+                            <span class="hidden absolute -top-1 -right-1 bg-red-500 text-white rounded-full px-1.5 py-0.5 text-xs font-bold" id="notificationBadge">0</span>
+                        </a>
+                        <div class="hidden absolute right-0 top-full w-[350px] max-h-[400px] overflow-y-auto bg-white rounded-lg shadow-lg mt-2 z-50 border border-[#e4e6eb]" id="notificationDropdown">
+                            <div class="p-3 border-b border-[#e4e6eb] flex justify-between items-center bg-white sticky top-0 z-10">
+                                <h6 class="mb-0 font-semibold">Notifications</h6>
+                                <button class="text-sm text-[#1877f2] hover:underline cursor-pointer" onclick="markAllRead()">Mark all read</button>
+                            </div>
+                            <div id="notificationList" class="divide-y divide-gray-100"></div>
+                        </div>
+                    </li>
+                    <li>
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="{% url 'profile' user.username %}">
+                            <i class="fas fa-user"></i> Profile
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="{% url 'logout' %}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="container mx-auto mt-4 px-2 sm:px-4">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="flex items-center justify-between gap-3 rounded-lg px-4 py-3 mb-3
+                        {% if message.tags == 'error' or message.tags == 'danger' %}bg-red-50 text-red-800
+                        {% elif message.tags == 'success' %}bg-green-50 text-green-800
+                        {% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-800
+                        {% else %}bg-blue-50 text-blue-800{% endif %}" role="alert">
+                <span>{{ message }}</span>
+                <button type="button" class="text-current opacity-60 hover:opacity-100" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        {% if user.is_authenticated %}
+        function loadNotifications() {
+            fetch('/accounts/api/all_notifications')
+                .then(res => res.json())
+                .then(data => {
+                    const badge = document.getElementById('notificationBadge');
+                    const list = document.getElementById('notificationList');
+                    
+                    if (data.unread_count > 0) {
+                        badge.textContent = data.unread_count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                    
+                    if (!data.notifications || data.notifications.length === 0) {
+                        list.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">No notifications</div>';
+                        return;
+                    }
+                    
+                    // Sort notifications to ensure newest ones appear at the top
+                    const sortedNotifications = [...data.notifications].sort((a, b) => {
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    });
+
+                    list.innerHTML = sortedNotifications.map(n => {
+                        let text = '';
+                        if (n.notification_type === 'like') text = 'liked your post';
+                        else if (n.notification_type === 'comment') text = 'commented on your post';
+                        else if (n.notification_type === 'follow') text = 'started following you';
+                        
+                        const bgClass = n.is_read ? 'bg-white' : 'bg-blue-50/60';
+                        const profileUrl = `/accounts/profile/${n.sender_username}/`;
+
+                        return `
+                            <div class="p-3 text-sm hover:bg-gray-100 transition cursor-pointer ${bgClass}" onclick="markRead(${n.id})">
+                                <div>
+                                    <a href="${profileUrl}" class="font-semibold text-gray-900 hover:underline hover:text-[#1877f2]" onclick="event.stopPropagation();">
+                                        ${n.sender_username}
+                                    </a> 
+                                    <span class="text-gray-700">${text}</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">${new Date(n.created_at).toLocaleDateString()}</div>
+                            </div>
+                        `;
+                    }).join('');
+                })
+                .catch(err => console.error('Error fetching notifications:', err));
+        }
+        
+        function markRead(id) {
+            fetch(`/accounts/api/mark_notificationread/${id}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            }).then(() => loadNotifications());
+        }
+        
+        function markAllRead() {
+            fetch('/accounts/api/markall_notificationread/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            }).then(() => loadNotifications());
+        }
+        
+        function getCookie(name) {
+            let value = `; ${document.cookie}`;
+            let parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+        
+        document.getElementById('notificationBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            const dropdown = document.getElementById('notificationDropdown');
+            dropdown.classList.toggle('hidden');
+        });
+        
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('notificationDropdown');
+            const btn = document.getElementById('notificationBtn');
+            if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+        
+        loadNotifications();
+        setInterval(loadNotifications, 30000);
+        {% endif %}
+        
+        // Toggle comment sections
+        function toggleComments(postId) {
+            const section = document.getElementById('comments-' + postId);
+            if (section) {
+                section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+    </script>
+    <script>
+        function editComment(id) {
+
+            document.getElementById("comment-text-" + id).classList.add("hidden");
+
+            document.getElementById("edit-form-" + id).classList.remove("hidden");
+        }
+
+        function cancelEdit(id) {
+
+            document.getElementById("comment-text-" + id).classList.remove("hidden");
+
+            document.getElementById("edit-form-" + id).classList.add("hidden");
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

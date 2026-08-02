@@ -1,0 +1,59 @@
+<!-- templates/login.html -->
+{% extends 'components/base.html' %}
+
+{% block content %}
+<div class="flex justify-center items-center min-h-[80vh] px-4">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-[#1877f2] py-4 px-6 text-center">
+            <h3 class="text-xl font-bold text-white">Login</h3>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6">
+            <form method="POST" class="space-y-4">
+                {% csrf_token %}
+
+                <!-- Username -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" 
+                           name="username" 
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2] focus:border-transparent transition" 
+                           required>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" 
+                           name="password" 
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2] focus:border-transparent transition" 
+                           required>
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" 
+                            class="w-full bg-[#1877f2] hover:bg-[#166fe5] text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150">
+                        Login
+                    </button>
+                </div>
+            </form>
+
+            <!-- Links -->
+            <div class="text-center mt-6 space-y-2 text-sm text-gray-600">
+                <p>
+                    Don't have an account? 
+                    <a href="{% url 'signup' %}" class="text-[#1877f2] font-semibold hover:underline">Sign up here</a>
+                </p>
+                <div>
+                    <a href="{% url 'forgot_password' %}" class="text-gray-500 hover:text-gray-700 hover:underline">Forgot password?</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

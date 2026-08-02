@@ -1,0 +1,536 @@
+{% extends 'components/base.html' %}
+{% block title %}Home{% endblock %}
+
+{% block extra_css %}
+<style>
+    /*
+      We can only reach <html>/<body> here because this block renders inside
+      <head> of base.html — Tailwind utility classes can't be applied to tags
+      we don't control, so these two rules stay as plain CSS. Everything else
+      below uses Tailwind classes instead.
+    */
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden; /* the page itself never scrolls; the track does */
+        overscroll-behavior: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="relative h-screen h-dvh overflow-hidden" id="tiktokContainer">
+
+    <!-- Prev/Next hint buttons: hidden on small screens to avoid overlapping content -->
+    <div class="hidden sm:flex fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 flex-col gap-2 sm:gap-2.5 z-20">
+        <button id="tiktokPrevBtn" title="Previous"
+                class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-0 bg-black/55 text-white text-sm sm:text-base flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+        <button id="tiktokNextBtn" title="Next"
+                class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-0 bg-black/55 text-white text-sm sm:text-base flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+    </div>
+
+    <div class="transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+         id="tiktokTrack">
+
+        <!-- Slide 0: create post box -->
+        <div class="h-screen h-dvh w-full box-border flex items-center justify-center py-2 px-2 sm:px-4 overflow-y-auto overscroll-contain tiktok-slide">
+            <div class="w-full max-w-xl sm:max-w-2xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm mb-4">
+                    <div class="p-4">
+                        <form method="post" action="{% url 'create_post' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <div class="flex gap-2">
+{% if user.profile_picture %}
+    <!-- Profile Picture -->
+    <img src="{{ user.profile_picture.url }}" 
+         alt="{{ user.username }}" 
+         class="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover shrink-0">
+{% else %}
+    <!-- Fallback Circle with First Letter -->
+    <div class="w-16 h-16 sm:w-20 sm:h-20 bg-blue-600 rounded-full flex items-center justify-center text-black text-xl sm:text-2xl font-bold shrink-0">
+        {{ user.username }}
+    </div>
+{% endif %}                                <!-- <div class="profile-pic w-16 h-16 sm:w-20 sm:h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold shrink-0">
+                                    {{ user.username.0|upper }}
+                                </div> -->
+
+                                <div class="flex-1 w-full">
+
+                                    <!-- Title -->
+                                    <input type="text"
+                                           name="title"
+                                           class="w-full rounded-lg border border-[#e4e6eb] px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
+                                           placeholder="Post title">
+
+                                    <!-- Content -->
+                                    <textarea name="content"
+                                              class="w-full rounded-lg border-0 bg-[#f0f2f5] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
+                                              placeholder="What's on your mind, {{ user.username }}?"
+                                              rows="3"
+                                              required></textarea>
+
+                                    <!-- Thumbnail -->
+                                    <!-- <div class="mt-3">
+                                        <label class="block text-sm font-medium text-[#65676b] mb-1">Thumbnail</label>
+                                        <input type="file"
+                                               name="thumbnail"
+                                               class="w-full text-sm text-[#65676b] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f0f2f5] file:font-medium file:text-[#050505] hover:file:bg-gray-200"
+                                               accept="image/*">
+                                    </div> -->
+
+                                    <!-- Video -->
+                                    <div class="mt-3">
+                                        <label class="block text-sm font-medium text-[#65676b] mb-1">Video</label>
+                                        <input type="file"
+                                               name="video"
+                                               class="w-full text-sm text-[#65676b] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#f0f2f5] file:font-medium file:text-[#050505] hover:file:bg-gray-200"
+                                               accept="video/*">
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <button type="submit" class="bg-[#1877f2] hover:bg-[#166fe5] text-white font-semibold px-8 py-2 rounded-lg">
+                                            Post
+                                        </button>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slides 1..N: posts -->
+        {% for post in posts %}
+        <div class="h-screen h-dvh w-full box-border flex items-center justify-center  px-2 sm:px-4 overflow-y-auto overscroll-contain tiktok-slide">
+            <div class="flex items-start justify-center gap-3 sm:gap-5 w-full max-w-[1100px] mx-auto flex-col max-[900px]:flex-col lg:flex-row">
+                <div class="post-card bg-white rounded-xl shadow-sm w-full max-w-full lg:max-w-[500px] shrink-0 mx-auto">
+                    <div class="p-4 flex items-center gap-3">
+                        <div class="profile-pic w-10 h-10 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                        {% if post.author.profile_picture %}
+                            <a href="{% url 'profile' post.author.username %}"><img src="{{ post.author.profile_picture.url }}" class="rounded-full w-10 h-10 object-cover"></a>
+                        {% else %}
+                            {{ post.author.username }}
+                        {% endif %}
+
+                        </div>
+                        <div class="flex-1">
+                            <a href="{% url 'profile' post.author.username %}" class="font-semibold text-[#050505] no-underline hover:underline">{{ post.author.username }}</a>
+                            <div class="text-sm text-[#65676b]">{{ post.created_at|timesince }} ago {% if post.is_edited %}(edited){% endif %}</div>
+                        </div>
+                        {% if post.author == user %}
+                        <div class="relative">
+                            <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f0f2f5]"
+                                    onclick="this.nextElementSibling.classList.toggle('hidden')">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <ul class="hidden absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-[#e4e6eb] py-1 z-10">
+                                <li><a class="block px-4 py-2 text-sm hover:bg-[#f0f2f5]" href="{% url 'edit_post' post.id %}">Edit</a></li>
+                                <li>
+                                    <form method="post" action="{% url 'delete_post' post.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-[#f0f2f5]"
+                                                onclick="return confirm('Delete this post?')">Delete</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Title -->
+                    {% if post.title %}
+                    <h2 class="px-4 pb-2 text-xl font-semibold text-[#050505]">{{ post.title }}</h2>
+                    {% endif %}
+
+                    <!-- Thumbnail -->
+                    {% if post.thumbnail %}
+                    <img src="{{ post.thumbnail.url }}"
+                         class="w-full h-auto"
+                         alt="{{ post.title }}">
+                    {% endif %}
+
+                    <!-- Content -->
+                    <div class="px-4 pb-4 text-[#050505] leading-relaxed">
+                        {{ post.content }}
+                    </div>
+
+                    <!-- Video / Image -->
+                    {% if post.video %}
+                    <div class="relative w-full max-h-[600px] bg-black flex justify-center items-center overflow-hidden">
+                        <video
+                            data-post-id="{{ post.id }}" src="{{ post.video.url }}"
+                               poster="{% if post.thumbnail %}{{ post.thumbnail.url }}{% endif %}"
+                               class="w-full h-auto max-h-[600px] object-contain"
+                               controls
+                               muted
+                               loop
+                               playsinline>
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    {% elif post.image %}
+                    <img src="{{ post.image.url }}" class="w-full h-auto max-h-[500px] object-cover" alt="Post image">
+                    {% endif %}
+
+
+                    <div class="px-4 py-2 border-t border-b border-[#e4e6eb] flex justify-between items-center text-[#65676b] text-sm">
+                        <span>{{ post.total_likes }} likes</span>
+                        <span>{{ post.total_comments }} comments</span>
+                    </div>
+
+                    <div class="px-2 py-1 flex gap-2">
+                        <form method="post" action="{% url 'like_post' post.id %}" class="flex-1">
+
+                            {% csrf_token %}
+                            <button type="submit" class="w-full flex items-center justify-center gap-2 border-0 bg-transparent p-2 rounded-lg font-semibold text-[#65676b] hover:bg-[#f0f2f5] transition {% if post.id in user_likes %}text-[#1877f2]{% endif %}">
+                            <i class="fa{% if post.id in users_likes %}s{% else %}r{% endif %} fa-heart"></i>
+                                Like
+                            </button>
+                        </form>
+                        <button class="flex-1 flex items-center justify-center gap-2 border-0 bg-transparent p-2 rounded-lg font-semibold text-[#65676b] hover:bg-[#f0f2f5] transition" onclick="toggleComments('{{ post.id }}')">
+                            <i class="far fa-comment"></i>
+                            Comment
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comment panel: sibling of the card. Sits to the right on large
+                     screens (in the open space), stacks full-width below on small/medium. -->
+                <div class="comment-section w-full lg:w-[320px] lg:max-w-[85vw] max-h-[50vh] lg:max-h-[80vh] bg-white rounded-lg border border-black/10 shadow-md p-3 sm:p-4 overflow-y-auto lg:self-stretch shrink-0"
+                     id="comments-{{ post.id }}" style="display:none;">
+                    <form method="post" action="{% url 'comment_post' post.id %}" class="mt-2" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="text" name="content"
+                               class="border-0 bg-[#f0f2f5] rounded-full px-4 py-2 w-full mt-2 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
+                               placeholder="Write a comment..." required>
+                    </form>
+
+                    {% for comment in post.comments.all %}
+                        <div class="bg-[#f0f2f5] rounded-2xl px-4 py-3 mt-2">
+
+                            <div class="flex justify-between">
+
+                                <div class="flex-1">
+
+                                    <span class="font-semibold text-[#050505] text-sm">
+                                        {{ comment.author.username }}
+                                    </span>
+
+                                    <!-- Display Mode -->
+                                    <div id="comment-text-{{ comment.id }}"
+                                        class="text-[#050505] text-sm mt-1">
+
+                                        {{ comment.content }}
+
+                                    </div>
+
+                                    <!-- Edit Mode -->
+                                    <form id="edit-form-{{ comment.id }}"
+                                        method="POST"
+                                        action="{% url 'edit_comment' comment.id %}"
+                                        class="hidden mt-2">
+
+                                        {% csrf_token %}
+
+                                        <textarea
+                                            name="content"
+                                            rows="2"
+                                            class="w-full border rounded-lg p-2">{{ comment.content }}</textarea>
+
+                                        <div class="flex gap-2 mt-2">
+
+                                            <button
+                                                type="submit"
+                                                class="bg-blue-600 text-white px-3 py-1 rounded">
+
+                                                Save
+
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onclick="cancelEdit({{ comment.id }})"
+                                                class="bg-gray-500 text-white px-3 py-1 rounded">
+
+                                                Cancel
+
+                                            </button>
+
+                                        </div>
+
+                                    </form>
+
+                                </div>
+
+                                {% if comment.author == user %}
+                                <div class="flex gap-3 ml-3">
+
+                                    <button
+                                        type="button"
+                                        onclick="editComment({{ comment.id }})"
+                                        class="text-blue-600 hover:text-blue-800">
+
+                                        <i class="fas fa-edit"></i>
+
+                                    </button>
+
+                                    <form method="POST"
+                                        action="{% url 'delete_comment' comment.id %}">
+
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            onclick="return confirm('Delete comment?')"
+                                            class="text-red-600 hover:text-red-800">
+
+                                            <i class="fas fa-trash"></i>
+
+                                        </button>
+
+                                    </form>
+
+                                </div>
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="h-screen h-dvh w-full box-border flex items-center justify-center py-2 px-2 sm:px-4 overflow-y-auto overscroll-contain tiktok-slide">
+            <div class="w-full max-w-xl sm:max-w-2xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm">
+                    <div class="p-4 text-center text-[#65676b]">
+                        No posts yet. Be the first to post!
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+<script>
+console.log("Recommendation JS Loaded");
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const videos = document.querySelectorAll("video");
+
+    const pauseAllVideos = (exceptVideo = null) => {
+        videos.forEach(candidate => {
+            if (candidate !== exceptVideo && !candidate.paused) {
+                candidate.pause();
+            }
+        });
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target;
+
+            if (entry.intersectionRatio >= 0.75) {
+                pauseAllVideos(video);
+                if (video.paused) {
+                    video.play().catch(() => {});
+                }
+            } else if (!video.paused) {
+                video.pause();
+            }
+        });
+    }, { threshold: [0.5, 0.75] });
+
+    videos.forEach(video => {
+
+        observer.observe(video);
+
+        let interval = null;
+
+        const postId = video.dataset.postId;
+
+        video.addEventListener("play", function () {
+
+            pauseAllVideos(video);
+            console.log("Video Started");
+
+            // Notify server that watching has started
+            fetch("/watch/start/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({
+                    post_id: postId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Watch started:", data);
+            });
+
+            // Prevent multiple intervals
+            if (interval) {
+                clearInterval(interval);
+            }
+
+            interval = setInterval(function () {
+                fetch("/watch/update/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({
+                        post_id: postId,
+                        duration: Math.floor(video.currentTime)
+                    })
+                });
+            }, 5000);
+        });
+
+        // Stop sending updates when paused
+        video.addEventListener("pause", function () {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        });
+
+        // Stop when video ends
+        video.addEventListener("ended", function () {
+            fetch("/watch/complete/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({
+                    post_id: postId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Video completed", data);
+            });
+        });
+    });
+
+});
+</script>
+
+<script>
+// Drives paging between the full-screen slides in #tiktokTrack.
+// (This logic was missing entirely — the script above only handles
+// video autoplay/watch-time tracking, not slide navigation.)
+document.addEventListener("DOMContentLoaded", function () {
+
+    const container = document.getElementById("tiktokContainer");
+    const track = document.getElementById("tiktokTrack");
+    const slides = Array.from(document.querySelectorAll(".tiktok-slide"));
+    const prevBtn = document.getElementById("tiktokPrevBtn");
+    const nextBtn = document.getElementById("tiktokNextBtn");
+
+    if (!container || !track || slides.length === 0) return;
+
+    let currentIndex = 0;
+    let isAnimating = false;
+
+    function updateButtons() {
+        if (prevBtn) prevBtn.disabled = currentIndex === 0;
+        if (nextBtn) nextBtn.disabled = currentIndex === slides.length - 1;
+    }
+
+    function goToSlide(newIndex) {
+        if (newIndex < 0 || newIndex >= slides.length) return;
+        if (isAnimating) return;
+        isAnimating = true;
+        currentIndex = newIndex;
+        track.style.transform = `translateY(-${currentIndex * 100}vh)`;
+        updateButtons();
+        setTimeout(() => { isAnimating = false; }, 460); // matches the 450ms CSS transition
+    }
+
+    updateButtons();
+
+    if (nextBtn) nextBtn.addEventListener("click", () => goToSlide(currentIndex + 1));
+    if (prevBtn) prevBtn.addEventListener("click", () => goToSlide(currentIndex - 1));
+
+    // Keyboard support
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowDown" || e.key === "PageDown") {
+            e.preventDefault();
+            goToSlide(currentIndex + 1);
+        } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+            e.preventDefault();
+            goToSlide(currentIndex - 1);
+        }
+    });
+
+    // Mouse wheel: only page between slides once the current slide's own
+    // internal scroll (overflow-y-auto, e.g. long content/comments) has
+    // reached its top or bottom edge — otherwise let it scroll normally.
+    let wheelLocked = false;
+
+    container.addEventListener("wheel", function (e) {
+        const slide = e.target.closest(".tiktok-slide");
+        if (!slide) return;
+
+        const atTop = slide.scrollTop <= 0;
+        const atBottom = Math.ceil(slide.scrollTop + slide.clientHeight) >= slide.scrollHeight;
+
+        if (e.deltaY > 0 && !atBottom) return; // still room to scroll down inside the slide
+        if (e.deltaY < 0 && !atTop) return;    // still room to scroll up inside the slide
+
+        e.preventDefault();
+        if (wheelLocked) return;
+        wheelLocked = true;
+
+        if (e.deltaY > 0) {
+            goToSlide(currentIndex + 1);
+        } else if (e.deltaY < 0) {
+            goToSlide(currentIndex - 1);
+        }
+
+        setTimeout(() => { wheelLocked = false; }, 500);
+    }, { passive: false });
+
+    // Touch swipe: same top/bottom-edge logic as wheel, so swiping inside a
+    // tall comment panel or post still scrolls it before paging the feed.
+    let touchStartY = 0;
+    let touchStartSlide = null;
+
+    container.addEventListener("touchstart", function (e) {
+        touchStartY = e.touches[0].clientY;
+        touchStartSlide = e.target.closest(".tiktok-slide");
+    }, { passive: true });
+
+    container.addEventListener("touchend", function (e) {
+        if (!touchStartSlide) return;
+        const deltaY = touchStartY - e.changedTouches[0].clientY;
+        if (Math.abs(deltaY) < 50) return; // too small to count as a swipe
+
+        const atTop = touchStartSlide.scrollTop <= 0;
+        const atBottom = Math.ceil(touchStartSlide.scrollTop + touchStartSlide.clientHeight) >= touchStartSlide.scrollHeight;
+
+        if (deltaY > 0 && atBottom) {
+            goToSlide(currentIndex + 1); // swiped up -> next
+        } else if (deltaY < 0 && atTop) {
+            goToSlide(currentIndex - 1); // swiped down -> previous
+        }
+    }, { passive: true });
+
+});
+</script>
+{% endblock %}

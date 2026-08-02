@@ -1,0 +1,209 @@
+{% extends 'components/base.html' %}
+{% block title %}{{ profile_user.username }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6">
+    <!-- Profile Header Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div class="flex flex-col sm:flex-row items-start gap-5">
+            <!-- Profile Picture / Initial -->
+            <div class="shrink-0">    
+                {% if profile_user.profile_picture %}
+                    <img src="{{ profile_user.profile_picture.url }}" class="w-20 h-20 rounded-full object-cover border-2 border-gray-100 shadow-sm" alt="{{ profile_user.username }}">
+                {% else %}
+                    <div class="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold border-2 border-gray-100 shadow-sm">
+                        {{ profile_user.username.0|upper }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Profile Info & Details -->
+            <div class="flex-1 w-full">
+                <h3 class="text-2xl font-bold text-gray-900 leading-tight">{{ profile_user.username }}</h3>
+                
+                {% if profile_user.bio %}
+                    <p class="text-gray-700 mt-1 text-sm sm:text-base leading-relaxed">{{ profile_user.bio }}</p>
+                {% else %}
+                    <p class="text-gray-400 italic text-sm mt-1">No bio available.</p>
+                {% endif %}
+
+                {% if profile_user.location %}
+                    <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5 font-medium">
+                        <i class="fas fa-map-marker-alt text-gray-400"></i> {{ profile_user.location }}
+                    </p>
+                {% endif %}
+
+                <!-- Profile Stats -->
+                <div class="flex items-center gap-6 mt-4 pt-4 border-t border-gray-100">
+                    <div class="text-center sm:text-left">
+                        <div class="text-lg font-bold text-gray-900">{{ posts.count }}</div>
+                        <div class="text-xs text-gray-500 font-medium">Posts</div>
+                    </div>
+                    <div class="text-center sm:text-left">
+                        <div class="text-lg font-bold text-gray-900">{{ followers_count }}</div>
+                        <div class="text-xs text-gray-500 font-medium">Followers</div>
+                    </div>
+                    <div class="text-center sm:text-left">
+                        <div class="text-lg font-bold text-gray-900">{{ following_count }}</div>
+                        <div class="text-xs text-gray-500 font-medium">Following</div>
+                    </div>
+                </div>
+
+                <!-- Profile Actions (Edit / Follow) -->
+                <div class="mt-4">
+                    {% if profile_user == user %}
+                        <a href="{% url 'edit_profile' %}" class="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-colors duration-150">
+                            Edit Profile
+                        </a>
+                    {% else %}
+                        <form method="post" action="{% url 'follow_toggle' profile_user.username %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 font-medium text-sm rounded-lg shadow-sm transition-colors duration-150 {% if is_following %}bg-gray-200 hover:bg-gray-300 text-gray-800{% else %}bg-blue-600 hover:bg-blue-700 text-white{% endif %}">
+                                {% if is_following %}Unfollow{% else %}Follow{% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Posts Section Header -->
+    <h5 class="text-lg font-semibold text-gray-800 mb-4">Posts</h5>
+
+    <!-- Posts List -->
+    <div class="space-y-4">
+        {% for post in posts %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <!-- Post Header -->
+            <div class="p-4 flex items-center gap-3">
+                <div class="shrink-0">
+                    {% if post.author.profile_picture %}
+                        <a href="{% url 'profile' post.author.username %}">
+                            <img src="{{ post.author.profile_picture.url }}" class="w-10 h-10 rounded-full object-cover border border-gray-100" alt="{{ post.author.username }}">
+                        </a>
+                    {% else %}
+                        <a href="{% url 'profile' post.author.username %}" class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                            {{ post.author.username.0|upper }}
+                        </a>
+                    {% endif %}
+                </div>
+
+                <div class="flex-1 min-w-0">
+                    <a href="{% url 'profile' post.author.username %}" class="font-semibold text-gray-900 hover:underline block truncate text-sm">
+                        {{ post.author.username }}
+                    </a>
+                    <div class="text-xs text-gray-400">
+                        {{ post.created_at|timesince }} ago {% if post.is_edited %}(edited){% endif %}
+                    </div>
+                </div>
+
+                <!-- Post Actions Dropdown (Only Author) -->
+                {% if post.author == user %}
+                <div class="relative group inline-block">
+    <!-- Trigger Button -->
+    <button type="button" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50">
+        <i class="fas fa-ellipsis-h"></i>
+    </button>
+
+    <!-- Dropdown Menu Wrapper (pt-2 keeps hover alive across the gap) -->
+    <div class="hidden group-hover:block absolute right-0 pt-2 z-10">
+        <div class="w-32 bg-white rounded-md shadow-lg border border-gray-100 py-1">
+            <a href="{% url 'edit_post' post.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                Edit
+            </a>
+            <form method="post" action="{% url 'delete_post' post.id %}">
+                {% csrf_token %}
+                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50" onclick="return confirm('Delete this post?')">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+                {% endif %}
+            </div>
+
+            <!-- Post Content -->
+            <div class="px-4 pb-3 text-gray-800 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                {{ post.content }}
+            </div>
+
+            <!-- Post Image -->
+            <!-- Video / Image -->
+                    {% if post.video %}
+                    <div class="relative w-full max-h-[600px] bg-black flex justify-center items-center overflow-hidden">
+                        <video
+                            data-post-id="{{ post.id }}" src="{{ post.video.url }}"
+                               poster="{% if post.thumbnail %}{{ post.thumbnail.url }}{% endif %}"
+                               class="w-full h-auto max-h-[600px] object-contain"
+                               controls
+                               muted
+                               loop
+                               playsinline>
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+            {% endif %}
+
+            <!-- Post Stats -->
+            <div class="px-4 py-2 flex items-center justify-between text-xs text-gray-500 border-b border-gray-50">
+                <span>{{ post.total_likes }} likes</span>
+                <span>{{ post.total_comments }} comments</span>
+            </div>
+
+            <!-- Post Action Buttons -->
+            <div class="px-2 py-1 flex items-center border-b border-gray-100">
+                <form method="post" action="{% url 'like_post' post.id %}" class="flex-1">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full py-2 px-3 flex items-center justify-center gap-2 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors {% if post.id in users_likes %}text-red-500{% else %}text-gray-600 hover:text-gray-800{% endif %}">
+                        <i class="fa{% if post.id in users_likes %}s text-red-500{% else %}r{% endif %} fa-heart"></i>
+                        <span>Like</span>
+                    </button>
+                </form>
+
+                <button class="flex-1 py-2 px-3 flex items-center justify-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-50 transition-colors" onclick="toggleComments({{ post.id }})">
+                    <i class="far fa-comment"></i>
+                    <span>Comment</span>
+                </button>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="p-4 bg-gray-50/50 space-y-3" id="comments-{{ post.id }}" style="display:none;">
+                <form method="post" action="{% url 'comment_post' post.id %}">
+                    {% csrf_token %}
+                    <input type="text" name="content" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
+                           placeholder="Write a comment..." required>
+                </form>
+
+                <div class="space-y-2 mt-3">
+                    {% for comment in post.comments.all %}
+                    <div class="bg-white p-3 rounded-lg border border-gray-100 text-sm">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1">
+                                <span class="font-semibold text-gray-900 block text-xs">{{ comment.author.username }}</span>
+                                <div class="text-gray-700 mt-0.5">{{ comment.content }}</div>
+                            </div>
+                            {% if comment.author == user %}
+                            <form method="post" action="{% url 'delete_comment' comment.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="text-gray-400 hover:text-red-500 p-1 text-xs transition-colors" 
+                                        onclick="return confirm('Delete comment?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400">
+            No posts yet. Be the first to post!
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

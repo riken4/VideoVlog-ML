@@ -1,0 +1,53 @@
+from django.contrib import admin
+from django.urls import path
+from .views import (
+    signup_view,
+    login_view,
+    logout_view,
+    profile_view,
+    edit_profile_view,
+    my_profile_view,
+    follow_toggle,
+    home_view,
+    create_post,
+    edit_post,
+    delete_post,
+    like_post,
+    comment_post,
+    delete_comment,
+    NotificationListAPIView,
+    MarkNotificationReadAPIView,
+    MarkAllNotificationReadAPIView,
+    forgot_password,
+    verify_otp,
+    set_password,
+    edit_comment
+
+)
+
+urlpatterns = [
+    path("signup/", signup_view, name="signup"),
+    path("login/", login_view, name="login"),
+    path("logout/", logout_view, name="logout"),
+    path("profile/<str:username>/", profile_view, name="profile"),
+    path("edit/profile/", edit_profile_view, name="edit_profile"),
+    path("my/profile/", my_profile_view, name="myprofile"),
+    path("follow_toggle/<str:username>/", follow_toggle, name="follow_toggle"),
+    path("", home_view, name="home"),
+    path("create/post/", create_post, name="create_post"),
+    path("edit/post/<int:post_id>/", edit_post, name="edit_post"),
+    path("delete/post/<int:post_id>/", delete_post, name="delete_post"),
+    path("like/post/<int:post_id>/", like_post, name="like_post"),
+    path("comment/post/<int:post_id>/", comment_post, name="comment_post"),
+    path("delete/comment/<int:comment_id>/", delete_comment, name="delete_comment"),
+    path("edit-comment/<int:comment_id>/",edit_comment,name="edit_comment"),
+    path("api/all_notifications", NotificationListAPIView.as_view()),
+    path(
+        "api/mark_notificationread/<int:notification_id>/",
+        MarkNotificationReadAPIView.as_view(),
+    ),
+    path("api/markall_notificationread/", MarkAllNotificationReadAPIView.as_view()),
+    path("forgot_password", forgot_password, name="forgot_password"),
+    path("verify_otp", verify_otp, name="verify_otp"),
+    path("set_password", set_password, name="set_password"),
+]

@@ -1,0 +1,428 @@
+{% extends 'components/base.html' %}
+{% block title %}Home{% endblock %}
+
+{% block extra_css %}
+<!-- Tailwind CDN (JIT) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+    /*
+      We can only reach <html>/<body> here because this block renders inside
+      <head> of base.html — Tailwind utility classes can't be applied to tags
+      we don't control, so these two rules stay as plain CSS. Everything else
+      below uses Tailwind classes instead.
+    */
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden; /* the page itself never scrolls; the track does */
+        overscroll-behavior: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="relative h-screen h-dvh overflow-hidden" id="tiktokContainer">
+
+    <!-- Prev/Next hint buttons: hidden on small screens to avoid overlapping content -->
+    <div class="hidden sm:flex fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 flex-col gap-2 sm:gap-2.5 z-20">
+        <button id="tiktokPrevBtn" title="Previous"
+                class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-0 bg-black/55 text-white text-sm sm:text-base flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+        <button id="tiktokNextBtn" title="Next"
+                class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-0 bg-black/55 text-white text-sm sm:text-base flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+    </div>
+
+    <div class="transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+         id="tiktokTrack">
+
+        <!-- Slide 0: create post box -->
+        <div class="h-screen h-dvh w-full box-border flex items-center justify-center py-2 px-2 sm:px-4 overflow-y-auto overscroll-contain tiktok-slide">
+            <div class="w-full max-w-xl sm:max-w-2xl mx-auto">
+                <div class="create-post-box card">
+                    <div class="card-body">
+                        <form method="post" action="{% url 'create_post' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <div class="d-flex gap-2">
+
+                                <div class="profile-pic w-16 h-16 sm:w-20 sm:h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold shrink-0">
+                                    {{ user.username.0|upper }}
+                                </div>
+
+                                <div class="flex-grow-1 w-full">
+
+                                    <!-- Title -->
+                                    <input type="text"
+                                           name="title"
+                                           class="form-control mb-2"
+                                           placeholder="Post title">
+
+                                    <!-- Content -->
+                                    <textarea name="content"
+                                              class="form-control border-0"
+                                              placeholder="What's on your mind, {{ user.username }}?"
+                                              rows="3"
+                                              required></textarea>
+
+                                    <!-- Thumbnail -->
+                                    <div class="mt-3">
+                                        <label class="form-label">Thumbnail</label>
+                                        <input type="file"
+                                               name="thumbnail"
+                                               class="form-control"
+                                               accept="image/*">
+                                    </div>
+
+                                    <!-- Video -->
+                                    <div class="mt-3">
+                                        <label class="form-label">Video</label>
+                                        <input type="file"
+                                               name="video"
+                                               class="form-control"
+                                               accept="video/*">
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            Post
+                                        </button>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slides 1..N: posts -->
+        {% for post in posts %}
+        <div class="h-screen h-dvh w-full box-border flex items-center justify-center py-2 px-2 sm:px-4 overflow-y-auto overscroll-contain tiktok-slide">
+            <div class="flex items-start justify-center gap-3 sm:gap-5 w-full max-w-[1100px] mx-auto flex-col max-[900px]:flex-col lg:flex-row">
+                <div class="post-card card w-full max-w-full lg:max-w-[500px] shrink-0 mx-auto">
+                    <div class="post-header">
+                        <div class="profile-pic">
+                        {% if post.author.profile_picture %}
+                            <a href="{% url 'profile' post.author.username %}"><img src="{{ post.author.profile_picture.url }}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                </a>
+                        {% else %}
+                            {{ post.author.username }}
+                        {% endif %}
+
+                        </div>
+                        <div class="flex-grow-1">
+                            <a href="" class="post-author">
+                               <a href="{% url 'profile' post.author.username %}"> {{ post.author.username }}</a>
+                            </a>
+                            <div class="post-time">{{ post.created_at|timesince }} ago {% if post.is_edited %}(edited){% endif %}</div>
+                        </div>
+                        {% if post.author == user %}
+                        <div class="dropdown">
+                            <button class="btn btn-sm" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'edit_post' post.id %}">Edit</a></li>
+                                <li>
+                                    <form method="post" action="{% url 'delete_post' post.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger"
+                                                onclick="return confirm('Delete this post?')">Delete</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Title -->
+                    {% if post.title %}
+                    <h2 class="post-title">{{ post.title }}</h2>
+                    {% endif %}
+
+                    <!-- Thumbnail -->
+                    {% if post.thumbnail %}
+                    <img src="{{ post.thumbnail.url }}"
+                         class="post-thumbnail w-full h-auto"
+                         alt="{{ post.title }}">
+                    {% endif %}
+
+                    <!-- Content -->
+                    <div class="post-content">
+                        {{ post.content }}
+                    </div>
+
+                    <!-- Video / Image -->
+                    {% if post.video %}
+                    <div class="video-container relative w-full max-h-[600px] bg-black flex justify-center items-center rounded-lg overflow-hidden">
+                        <video
+                            data-post-id="{{ post.id }}" src="{{ post.video.url }}"
+                               poster="{% if post.thumbnail %}{{ post.thumbnail.url }}{% endif %}"
+                               class="w-full h-auto max-h-[600px] object-contain"
+                               controls
+                               muted
+                               loop
+                               playsinline>
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    {% elif post.image %}
+                    <img src="{{ post.image.url }}" class="post-image w-full h-auto" alt="Post image">
+                    {% endif %}
+
+
+                    <div class="post-stats">
+                        <span>{{ post.total_likes }} likes</span>
+                        <span>{{ post.total_comments }} comments</span>
+                    </div>
+
+                    <div class="post-actions">
+                        <form method="post" action="{% url 'like_post' post.id %}" style="flex:1;">
+
+                            {% csrf_token %}
+                            <button type="submit" class="action-btn {% if post.id in user_likes %}liked{% endif %}">
+                            <i class="fa{% if post.id in users_likes %}s{% else %}r{% endif %} fa-heart"></i>
+                                Like
+                            </button>
+                        </form>
+                        <button class="action-btn" onclick="toggleComments('{{ post.id }}')">
+                            <i class="far fa-comment"></i>
+                            Comment
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comment panel: sibling of the card. Sits to the right on large
+                     screens (in the open space), stacks full-width below on small/medium. -->
+                <div class="comment-section w-full lg:w-[320px] lg:max-w-[85vw] max-h-[50vh] lg:max-h-[80vh] bg-white rounded-lg border border-black/10 shadow-md p-3 sm:p-4 overflow-y-auto lg:self-stretch shrink-0"
+                     id="comments-{{ post.id }}" style="display:none;">
+                    <form method="post" action="{% url 'comment_post' post.id %}" class="mt-2" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="text" name="content" class="comment-input"
+                               placeholder="Write a comment..." required>
+                    </form>
+
+                    {% for comment in post.comments.all %}
+                    <div class="comment-item">
+                        <div class="d-flex justify-content-between">
+                            <div class="flex-grow-1">
+                                <span class="comment-author">{{ comment.author.username }}</span>
+                                <div class="comment-text">{{ comment.content }}</div>
+                            </div>
+                            {% if comment.author == user %}
+                            <form method="post" action="{% url 'delete_comment' comment.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-link text-danger"
+                                        onclick="return confirm('Delete comment?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="h-screen h-dvh w-full box-border flex items-center justify-center py-2 px-2 sm:px-4 overflow-y-auto overscroll-contain tiktok-slide">
+            <div class="w-full max-w-xl sm:max-w-2xl mx-auto">
+                <div class="card">
+                    <div class="card-body text-center text-muted">
+                        No posts yet. Be the first to post!
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+<script>
+console.log("Recommendation JS Loaded");
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const container = document.getElementById("tiktokContainer");
+    const track = document.getElementById("tiktokTrack");
+    const slides = Array.from(track.querySelectorAll(".tiktok-slide"));
+    const prevBtn = document.getElementById("tiktokPrevBtn");
+    const nextBtn = document.getElementById("tiktokNextBtn");
+
+    let currentIndex = 0;
+    let isAnimating = false;
+    const ANIMATION_MS = 450;
+
+    function updateNavButtons() {
+        prevBtn.disabled = currentIndex === 0;
+        nextBtn.disabled = currentIndex === slides.length - 1;
+    }
+
+    function pauseAllVideosExcept(exceptVideo = null) {
+        document.querySelectorAll("video").forEach(v => {
+            if (v !== exceptVideo && !v.paused) v.pause();
+        });
+    }
+
+    function playCurrentSlideVideo() {
+        const currentSlide = slides[currentIndex];
+        const video = currentSlide.querySelector("video");
+        pauseAllVideosExcept(video);
+        if (video) {
+            video.play().catch(() => {});
+        }
+    }
+
+    function goToSlide(index) {
+        if (isAnimating) return;
+        index = Math.max(0, Math.min(index, slides.length - 1));
+        if (index === currentIndex) return;
+
+        isAnimating = true;
+        currentIndex = index;
+        track.style.transform = `translateY(-${currentIndex * 100}vh)`;
+        updateNavButtons();
+
+        setTimeout(() => {
+            isAnimating = false;
+            playCurrentSlideVideo();
+        }, ANIMATION_MS);
+    }
+
+    // ---- Wheel: one notch = one slide ----
+    let wheelLock = false;
+    container.addEventListener("wheel", function (e) {
+        // Allow native scrolling inside a slide's own scrollable content
+        // (e.g. a long comment list) if that slide isn't at its scroll edge.
+        const slide = slides[currentIndex];
+        const atTop = slide.scrollTop <= 0;
+        const atBottom = Math.ceil(slide.scrollTop + slide.clientHeight) >= slide.scrollHeight;
+
+        const scrollingDown = e.deltaY > 0;
+        const scrollingUp = e.deltaY < 0;
+
+        const shouldChangeSlide =
+            (scrollingDown && atBottom) ||
+            (scrollingUp && atTop) ||
+            slide.scrollHeight <= slide.clientHeight;
+
+        if (!shouldChangeSlide) return; // let it scroll inside the slide
+
+        e.preventDefault();
+        if (wheelLock || isAnimating) return;
+
+        wheelLock = true;
+        if (scrollingDown) {
+            goToSlide(currentIndex + 1);
+        } else if (scrollingUp) {
+            goToSlide(currentIndex - 1);
+        }
+        setTimeout(() => { wheelLock = false; }, ANIMATION_MS + 50);
+    }, { passive: false });
+
+    // ---- Touch swipe: one swipe = one slide ----
+    let touchStartY = null;
+    container.addEventListener("touchstart", function (e) {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    container.addEventListener("touchend", function (e) {
+        if (touchStartY === null) return;
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaY = touchStartY - touchEndY;
+        const SWIPE_THRESHOLD = 50;
+
+        if (Math.abs(deltaY) > SWIPE_THRESHOLD) {
+            if (deltaY > 0) {
+                goToSlide(currentIndex + 1);
+            } else {
+                goToSlide(currentIndex - 1);
+            }
+        }
+        touchStartY = null;
+    }, { passive: true });
+
+    // ---- Keyboard arrows ----
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowDown" || e.key === "PageDown") {
+            e.preventDefault();
+            goToSlide(currentIndex + 1);
+        } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+            e.preventDefault();
+            goToSlide(currentIndex - 1);
+        }
+    });
+
+    // ---- Nav buttons ----
+    nextBtn.addEventListener("click", () => goToSlide(currentIndex + 1));
+    prevBtn.addEventListener("click", () => goToSlide(currentIndex - 1));
+
+    // ---- Video watch tracking (unchanged behavior, just wired per-video) ----
+    document.querySelectorAll("video").forEach(video => {
+        let interval = null;
+        const postId = video.dataset.postId;
+
+        video.addEventListener("play", function () {
+            pauseAllVideosExcept(video);
+            console.log("Video Started");
+
+            fetch("/watch/start/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ post_id: postId })
+            })
+            .then(response => response.json())
+            .then(data => console.log("Watch started:", data));
+
+            if (interval) clearInterval(interval);
+            interval = setInterval(function () {
+                fetch("/watch/update/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({
+                        post_id: postId,
+                        duration: Math.floor(video.currentTime)
+                    })
+                });
+            }, 5000);
+        });
+
+        video.addEventListener("pause", function () {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        });
+
+        video.addEventListener("ended", function () {
+            fetch("/watch/complete/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ post_id: postId })
+            })
+            .then(response => response.json())
+            .then(data => console.log("Video completed", data));
+        });
+    });
+
+    // Init
+    updateNavButtons();
+    playCurrentSlideVideo();
+});
+</script>
+{% endblock %}
