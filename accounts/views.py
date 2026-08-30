@@ -17,7 +17,10 @@ from django.shortcuts import get_object_or_404
 
 from post.hybrid import hybrid_recommend
 from moderation.comment_predict import predict_comment
-
+from django.http import JsonResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.utils.timesince import timesince
 
 # Create your views here.
 
@@ -171,16 +174,18 @@ def home_view(request):
 
         posts = Post.objects.none()
 
-    like_obj = Like.objects.filter(user=request.user)
-
-    users_likes = like_obj.values_list(
-        "post_id",
-        flat=True
+    user_likes = list(
+        Like.objects.filter(
+            user=request.user
+        ).values_list(
+            "post_id",
+            flat=True
+        )
     )
 
     context = {
         "posts": posts,
-        "users_likes": users_likes,
+        "user_likes": user_likes,  
     }
 
     return render(
@@ -188,7 +193,6 @@ def home_view(request):
         "pages/home.html",
         context
     )
-
 @login_required
 def create_post(request):
     if request.method == "POST":
@@ -251,20 +255,80 @@ def delete_post(request,post_id):
     messages.success(request,"Post deleted successfully")
     return redirect("home")
 
-@login_required
-def like_post(request,post_id):
-    if request.method=="POST":
-        post=Post.objects.get(id=post_id)
-        like_instance=Like.objects.filter(user=request.user,post=post)
-        if like_instance:
-            like_instance.delete()
-        else:
-            Like.objects.create(user=request.user,post=post)
-            if post.author!=request.user:
-                Notification.objects.create(recipient=post.author,sender=request.user,notification_type='like',post=post)
-        return redirect('home')
-    return redirect('home')
 
+
+@login_required
+def like_post(request, post_id):
+
+    if request.method == "POST":
+
+        post = Post.objects.get(id=post_id)
+
+        like_instance = Like.objects.filter(
+            user=request.user,
+            post=post
+        )
+
+        if like_instance.exists():
+
+            like_instance.delete()
+
+            liked = False
+
+        else:
+
+            Like.objects.create(
+                user=request.user,
+                post=post
+            )
+
+            liked = True
+
+
+            if post.author != request.user:
+
+                Notification.objects.create(
+                    recipient=post.author,
+                    sender=request.user,
+                    notification_type='like',
+                    post=post
+                )
+
+
+        # Total like count
+        total_likes = Like.objects.filter(
+            post=post
+        ).count()
+
+
+        # Send WebSocket update
+        channel_layer = get_channel_layer()
+
+        async_to_sync(
+            channel_layer.group_send
+        )(
+            f"post_{post.id}",
+            {
+                "type": "like_update",
+                "likes": total_likes,
+                "liked": liked
+            }
+        )
+
+
+        return JsonResponse({
+
+            "success": True,
+            "likes": total_likes,
+            "liked": liked
+
+        })
+
+
+    return JsonResponse({
+        "success": False
+    })
+from moderation.comment_predict import predict_comment
 
 @login_required
 def comment_post(request, post_id):
@@ -272,27 +336,34 @@ def comment_post(request, post_id):
     if request.method == "POST":
 
         post = Post.objects.get(id=post_id)
-        content = request.POST.get("content")
 
-        # Predict comment using Logistic Regression
+        content = request.POST.get("content", "").strip()
+        if not content:
+            return JsonResponse({
+        "success": False,
+        "message": "Comment cannot be empty."
+            })
+
+        # Toxicity prediction
         prediction = predict_comment(content)
 
-        # Reject toxic comments
         if prediction == 1:
-            messages.error(
-                request,
-                "Your comment violates our community guidelines and cannot be posted."
-            )
-            return redirect("home")
 
-        # Save safe comment
+            return JsonResponse({
+                "success": False,
+                "message": "Your comment violates our community guidelines."
+            })
+
+        # Save comment
         comment = Comment.objects.create(
             post=post,
             content=content,
             author=request.user
         )
 
+        # Notification
         if post.author != request.user:
+
             Notification.objects.create(
                 recipient=post.author,
                 sender=request.user,
@@ -301,49 +372,129 @@ def comment_post(request, post_id):
                 comment=comment
             )
 
-        messages.success(request, "Comment added successfully.")
+        # WebSocket update
+        channel_layer = get_channel_layer()
 
-        return redirect("home")
+        async_to_sync(channel_layer.group_send)(
+            f"post_{post.id}",
+            {
+                "type": "comment_update",
+                "comment_id": comment.id,
+                "author_id": request.user.id,
+                "username": request.user.username,
+                "comment": comment.content,
+                "time": timesince(comment.created_at)
+            }
+        )
 
-    return redirect("home")@login_required
+        return JsonResponse({
+            "success": True,
+            "username": request.user.username,
+            "comment": comment.content
+        })
 
-def delete_comment(request,comment_id):
-        comment=Comment.objects.get(id=comment_id)
-        comment.delete()
-        messages.success(request,"comment deleted successfully")
-        return redirect('home')
+    return JsonResponse({
+        "success": False
+    })
 
+
+def delete_comment(request, comment_id):
+
+    if request.method != "POST":
+        return JsonResponse({
+            "success": False,
+            "message": "Invalid request."
+        }, status=405)
+
+    comment = get_object_or_404(Comment, id=comment_id)
+
+    if comment.author != request.user:
+        return JsonResponse({
+            "success": False,
+            "message": "You cannot delete this comment."
+        }, status=403)
+
+    post_id = comment.post.id
+
+    comment.delete()
+
+    # -------------------------
+    # SEND REAL-TIME DELETE
+    # -------------------------
+
+    channel_layer = get_channel_layer()
+
+    async_to_sync(channel_layer.group_send)(
+        f"post_{post_id}",
+        {
+            "type": "comment_deleted",
+            "comment_id": comment_id
+        }
+    )
+
+    return JsonResponse({
+        "success": True,
+        "comment_id": comment_id
+    })
 from moderation.comment_predict import predict_comment
 
 @login_required
+
 def edit_comment(request, comment_id):
 
-    comment = Comment.objects.get(id=comment_id)
+    comment = get_object_or_404(Comment, id=comment_id)
 
     if comment.author != request.user:
-        messages.error(request, "You are not authorized to edit this comment.")
-        return redirect("home")
+        return JsonResponse({
+            "success": False,
+            "message": "You are not authorized to edit this comment."
+        }, status=403)
 
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({
+            "success": False,
+            "message": "Invalid request method."
+        }, status=405)
 
-        content = request.POST.get("content")
+    content = request.POST.get("content", "").strip()
 
-        prediction = predict_comment(content)
+    if not content:
+        return JsonResponse({
+            "success": False,
+            "message": "Comment cannot be empty."
+        }, status=400)
 
-        if prediction == 1:
-            messages.error(
-                request,
-                "Your comment violates our community guidelines."
-            )
-            return redirect("home")
+    prediction = predict_comment(content)
 
-        comment.content = content
-        comment.save()
+    if prediction == 1:
+        return JsonResponse({
+            "success": False,
+            "message": "Your comment violates our community guidelines."
+        }, status=400)
 
-        messages.success(request, "Comment updated successfully.")
+    comment.content = content
+    comment.save()
 
-    return redirect("home")
+    # -------------------------
+    # SEND REAL-TIME UPDATE
+    # -------------------------
 
+    channel_layer = get_channel_layer()
+
+    async_to_sync(channel_layer.group_send)(
+        f"post_{comment.post.id}",
+        {
+            "type": "comment_edited",
+            "comment_id": comment.id,
+            "comment": comment.content
+        }
+    )
+
+    return JsonResponse({
+        "success": True,
+        "comment_id": comment.id,
+        "content": comment.content
+    })
 class NotificationListAPIView(APIView):
     permission_classes=[IsAuthenticated]
     

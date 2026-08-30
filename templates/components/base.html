@@ -75,6 +75,7 @@
             {% endfor %}
         {% endif %}
 
+         
         {% block content %}{% endblock %}
     </div>
 
@@ -179,8 +180,7 @@
                 section.style.display = section.style.display === 'none' ? 'block' : 'none';
             }
         }
-    </script>
-    <script>
+    
         function editComment(id) {
 
             document.getElementById("comment-text-" + id).classList.add("hidden");
@@ -194,7 +194,553 @@
 
             document.getElementById("edit-form-" + id).classList.add("hidden");
         }
-    </script>
+
+        function saveComment(event, commentId, form) {
+            event.preventDefault();
+
+            fetch(form.action, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+                body: new FormData(form)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || "Error editing comment.");
+                    return;
+                }
+
+                const commentText = document.getElementById("comment-text-" + commentId);
+                if (commentText) {
+                    commentText.textContent = data.content;
+                }
+                cancelEdit(commentId);
+            })
+            .catch(error => {
+                console.error("Error editing comment:", error);
+                alert("Error editing comment. Please try again.");
+            });
+
+            return false;
+        }
+// ==========================================
+// REALTIME WEBSOCKET
+// ==========================================
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const sockets = {};
+    
+    // Get current user ID from Django template
+    const currentUserId = parseInt('{{ user.id }}') || null;
+    
+    console.log("Current User ID from template:", currentUserId);
+    console.log("User object:", '{{ user }}');
+
+    const posts = document.querySelectorAll("[data-post-id]");
+
+    posts.forEach(post => {
+
+        const postId = post.dataset.postId;
+
+        const protocol =
+            window.location.protocol === "https:"
+            ? "wss://"
+            : "ws://";
+
+        const socket = new WebSocket(
+            protocol +
+            window.location.host +
+            "/ws/post/" +
+            postId +
+            "/"
+        );
+
+        sockets[postId] = socket;
+
+        socket.onopen = function () {
+
+            console.log(
+                "WebSocket connected:",
+                postId
+            );
+
+        };
+
+
+        socket.onmessage = function (event) {
+
+            const data = JSON.parse(event.data);
+
+            console.log("WebSocket data received:", data);
+            console.log("Current User ID in handler:", currentUserId);
+            console.log("Comment author ID:", data.author_id);
+            console.log("Is author?", currentUserId && data.author_id === currentUserId);
+
+            // ============================
+            // LIKE UPDATE
+            // ============================
+
+            if (data.type === "like_update") {
+
+                const likeCount =
+                    document.getElementById(
+                        `likes-count-${postId}`
+                    );
+
+                if (likeCount) {
+
+                    likeCount.innerHTML =
+                        `${data.likes} likes`;
+
+                }
+
+            }
+
+            // ============================
+            // COMMENT EDIT UPDATE
+            // ============================
+
+            if (data.type === "comment_edited") {
+                const commentText = document.getElementById(
+                    `comment-text-${data.comment_id}`
+                );
+
+                if (commentText) {
+                    commentText.textContent = data.comment;
+                }
+
+                const editForm = document.getElementById(
+                    `edit-form-${data.comment_id}`
+                );
+
+                if (editForm) {
+                    const textarea = editForm.querySelector("textarea[name='content']");
+                    if (textarea) {
+                        textarea.value = data.comment;
+                    }
+                    editForm.classList.add("hidden");
+                }
+
+                if (commentText) {
+                    commentText.classList.remove("hidden");
+                }
+                return;
+            }
+
+
+            // ============================
+            // COMMENT UPDATE
+            // ============================
+
+            if (data.type === "comment_update") {
+
+                const commentList =
+                    document.getElementById(
+                        `comment-list-${postId}`
+                    );
+
+                if (!commentList)
+                    return;
+
+                // Check if comment already exists (prevent duplicates)
+                const existingComment =
+                    document.getElementById(
+                        `comment-${data.comment_id}`
+                    );
+
+                if (existingComment)
+                    return;
+
+                // Check if current user is the comment author
+                const isAuthor = currentUserId && data.author_id && (parseInt(data.author_id) === currentUserId);
+                
+                console.log(`Building comment ${data.comment_id}:`, {
+                    isAuthor: isAuthor,
+                    currentUserId: currentUserId,
+                    authorId: data.author_id,
+                    authorIdParsed: parseInt(data.author_id)
+                });
+
+                const csrfToken = getCookie('csrftoken');
+
+                // Build the comment HTML
+                let commentHTML = `
+                    <div class="bg-neutral-800/60 rounded-xl p-3 text-xs" id="comment-${data.comment_id}">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="flex-1">
+                                <span class="font-bold text-neutral-300">@${data.username}</span>
+
+                                <div id="comment-text-${data.comment_id}" class="text-neutral-100 mt-1">
+                                    ${data.comment}
+                                </div>
+
+                                <div class="flex items-center gap-3 mt-1 text-neutral-500">
+                                    <span>${data.time}</span>
+                                    <button type="button" class="hover:text-neutral-300">Reply</button>
+                                </div>
+
+                                <!-- Comment Edit Form -->
+                                <form id="edit-form-${data.comment_id}"
+                                method="POST"
+                                action="/accounts/edit-comment/${data.comment_id}/"
+                                class="hidden mt-2"
+                                onsubmit="return saveComment(event, ${data.comment_id}, this)">
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                                    <textarea name="content"
+                                            rows="2"
+                                            class="w-full bg-neutral-700 text-white rounded p-2 text-xs focus:outline-none">${data.comment}</textarea>
+
+                                    <div class="flex gap-2 mt-1">
+                                        <button type="submit"
+                                                class="bg-blue-600 text-white px-2 py-1 rounded">
+                                            Save
+                                        </button>
+
+                                        <button type="button"
+                                                onclick="cancelEdit(${data.comment_id})"
+                                                class="bg-neutral-600 text-white px-2 py-1 rounded">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                `;
+
+                // Add action buttons if user is the author
+                if (isAuthor) {
+                    commentHTML += `
+                            <div class="flex gap-2 text-neutral-400 shrink-0">
+                                <button type="button" onclick="editComment(${data.comment_id})" class="hover:text-blue-400" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" onclick="deleteCommentWebSocket(event, ${data.comment_id})" class="hover:text-red-400" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                    `;
+                }
+
+                commentHTML += `
+                        </div>
+                    </div>
+                    `;
+
+                commentList.insertAdjacentHTML("beforeend", commentHTML);
+                console.log(`Comment ${data.comment_id} inserted with buttons:`, isAuthor);
+
+            }
+
+        };
+
+
+        socket.onerror = function (error) {
+
+            console.error(
+                "WebSocket Error:",
+                error
+            );
+
+        };
+
+
+        socket.onclose = function () {
+
+            console.log(
+                "WebSocket Closed:",
+                postId
+            );
+
+        };
+
+    });
+
+});
+
+
+// ==========================================
+// CSRF
+// ==========================================
+
+function getCookie(name) {
+
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+
+        const cookies =
+            document.cookie.split(";");
+
+        for (let i = 0; i < cookies.length; i++) {
+
+            const cookie =
+                cookies[i].trim();
+
+            if (
+
+                cookie.substring(
+                    0,
+                    name.length + 1
+
+                ) ===
+
+                (name + "=")
+
+            ) {
+
+                cookieValue =
+                    decodeURIComponent(
+
+                        cookie.substring(
+                            name.length + 1
+                        )
+
+                    );
+
+                break;
+
+            }
+
+        }
+
+    }
+
+    return cookieValue;
+
+}
+
+
+
+// ==========================================
+// LIKE POST
+// ==========================================
+
+function likePost(postId, button) {
+
+    fetch(
+
+        `/accounts/like/post/${postId}/`,
+
+        {
+
+            method: "POST",
+
+            headers: {
+
+                "X-CSRFToken":
+                    getCookie("csrftoken"),
+
+                "Content-Type":
+                    "application/json"
+
+            }
+
+        }
+
+    )
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        if (!data.success)
+            return;
+
+        console.log("Like Updated");
+
+        const likeCount =
+            document.getElementById(
+                `likes-count-${postId}`
+            );
+
+        if (likeCount) {
+
+            likeCount.innerHTML =
+                `${data.likes} likes`;
+
+        }
+
+        const icon =
+            button.querySelector("i");
+
+        if (data.liked) {
+
+            button.classList.remove(
+                "text-[#65676b]"
+            );
+
+            button.classList.add(
+                "text-red-500"
+            );
+
+            icon.classList.remove(
+                "far"
+            );
+
+            icon.classList.add(
+                "fas"
+            );
+
+        }
+
+        else {
+
+            button.classList.remove(
+                "text-red-500"
+            );
+
+            button.classList.add(
+                "text-[#65676b]"
+            );
+
+            icon.classList.remove(
+                "fas"
+            );
+
+            icon.classList.add(
+                "far"
+            );
+
+        }
+
+    })
+
+    .catch(error => {
+
+        console.error(error);
+
+    });
+
+}
+
+
+
+// ==========================================
+// COMMENT POST
+// ==========================================
+
+function submitComment(event, postId) {
+
+    event.preventDefault();
+
+    const input =
+        document.getElementById(
+            `comment-input-${postId}`
+        );
+
+    const formData =
+        new FormData();
+
+    formData.append(
+        "content",
+        input.value
+    );
+
+    fetch(
+
+        `/accounts/comment/post/${postId}/`,
+
+        {
+
+            method: "POST",
+
+            headers: {
+
+                "X-CSRFToken":
+                    getCookie("csrftoken")
+
+            },
+
+            body: formData
+
+        }
+
+    )
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        if (data.success) {
+
+            input.value = "";
+            
+            // Scroll comment list to bottom to show new comment
+            const commentList =
+                document.getElementById(
+                    `comment-list-${postId}`
+                );
+            
+            if (commentList) {
+                setTimeout(() => {
+                    commentList.scrollTop = commentList.scrollHeight;
+                }, 100);
+            }
+
+        }
+
+        else {
+
+            alert(data.message);
+
+        }
+
+    })
+
+    .catch(error => {
+
+        console.error(error);
+        alert("Error posting comment. Please try again.");
+
+    });
+    
+    return false;
+
+}
+
+// ==========================================
+// DELETE COMMENT FROM WEBSOCKET
+// ==========================================
+
+function deleteCommentWebSocket(event, commentId) {
+    
+    event.preventDefault();
+    
+    if (!confirm('Delete this comment?')) {
+        return false;
+    }
+    
+    fetch(
+        `/accounts/delete/comment/${commentId}/`,
+        {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken"),
+                "Content-Type": "application/json"
+            }
+        }
+    )
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const commentEl = document.getElementById(`comment-${commentId}`);
+            if (commentEl) {
+                commentEl.remove();
+            }
+            console.log("Comment deleted:", commentId);
+        } else {
+            alert(data.message || "Error deleting comment");
+        }
+    })
+    .catch(error => {
+        console.error("Error deleting comment:", error);
+        alert("Error deleting comment. Please try again.");
+    });
+    
+    return false;
+}    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

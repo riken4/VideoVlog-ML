@@ -1,3 +1,4 @@
+
 from django.urls import path
 from accounts.views import home_view
 from .views import watch_start

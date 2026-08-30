@@ -82,28 +82,31 @@ def watch_update(request):
     post_id = data.get("post_id")
     duration = data.get("duration")
 
-    post = get_object_or_404(Post, id=post_id)
+    print("Post ID:", post_id)
+    print("Duration:", duration)
 
     try:
+        post = Post.objects.get(id=post_id)
+        print("Post exists")
+    except Post.DoesNotExist:
+        print("POST DOES NOT EXIST")
+        return JsonResponse({"error": "Post not found"}, status=404)
 
+    try:
         watch = WatchHistory.objects.get(
             user=request.user,
             post=post
         )
-
-        watch.watch_duration = duration
-        watch.save()
-
-        return JsonResponse({
-            "success": True
-        })
+        print("WatchHistory exists")
 
     except WatchHistory.DoesNotExist:
+        print("WATCH HISTORY DOES NOT EXIST")
+        return JsonResponse({"error": "WatchHistory not found"}, status=404)
 
-        return JsonResponse({
-            "success": False
-        }, status=404)
-        
+    watch.watch_duration = duration
+    watch.save()
+
+    return JsonResponse({"success": True})
 @require_POST
 @login_required
 def watch_complete(request):

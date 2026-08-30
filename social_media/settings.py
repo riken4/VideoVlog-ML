@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'django_extensions',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,6 +42,7 @@ INSTALLED_APPS = [
     'post',
     'accounts',
     'rest_framework',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +74,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'social_media.wsgi.application'
+ASGI_APPLICATION = "social_media.asgi.application"
 
 
 # Database
@@ -138,4 +142,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'rikenmaharjan4@gmail.com'
 EMAIL_HOST_PASSWORD = 'ylpw eqbf gguu nrvu'
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 

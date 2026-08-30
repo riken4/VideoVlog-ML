@@ -3,7 +3,14 @@
 
 {% block extra_css %}
 <style>
-    
+    html, body {
+        height: 100%;
+        margin: 0;
+        background-color: #121212;
+        color: #ffffff;
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
 
     /* Custom scrollbar for comment section */
     .custom-scrollbar::-webkit-scrollbar {
@@ -27,7 +34,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="relative h-screen h-dvh overflow-hidden pt-6 font-sans" id="tiktokContainer">
+<div class="relative h-screen h-dvh overflow-hidden bg-[#121212] font-sans" id="tiktokContainer">
 
     <!-- Prev/Next vertical navigation controls -->
     <div class="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 flex-col gap-3 z-30">
@@ -112,7 +119,7 @@
 
                         <!-- Mute toggle -->
                         <button type="button" onclick="event.stopPropagation(); toggleMute('{{ post.id }}')"
-                                class="absolute bottom-3 right-3 z-20 w-8 h-8 mb-4 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs flex items-center justify-center">
+                                class="absolute bottom-3 right-3 z-20 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs flex items-center justify-center">
                             <i id="mute-icon-{{ post.id }}" class="fas fa-volume-mute"></i>
                         </button>
 
@@ -297,45 +304,22 @@
                                     </div>
 
                                     <!-- Comment Edit Form -->
-                                    <form id="edit-form-{{ comment.id }}"
-                                    method="POST"
-                                    action="{% url 'edit_comment' comment.id %}"
-                                    class="hidden mt-2"
-                                    onsubmit="return saveComment(event, {{ comment.id }}, this)">
-
-                                    {% csrf_token %}
-
-                                    <textarea name="content"
-                                            rows="2"
-                                            class="w-full bg-neutral-700 text-white rounded p-2 text-xs focus:outline-none">{{ comment.content }}</textarea>
-
-                                    <div class="flex gap-2 mt-1">
-                                        <button type="submit"
-                                                class="bg-blue-600 text-white px-2 py-1 rounded">
-                                            Save
-                                        </button>
-
-                                        <button type="button"
-                                                onclick="cancelEdit({{ comment.id }})"
-                                                class="bg-neutral-600 text-white px-2 py-1 rounded">
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </form>
+                                    <form id="edit-form-{{ comment.id }}" method="POST" action="{% url 'edit_comment' comment.id %}" class="hidden mt-2">
+                                        {% csrf_token %}
+                                        <textarea name="content" rows="2" class="w-full bg-neutral-700 text-white rounded p-2 text-xs focus:outline-none">{{ comment.content }}</textarea>
+                                        <div class="flex gap-2 mt-1">
+                                            <button type="submit" class="bg-blue-600 text-white px-2 py-1 rounded">Save</button>
+                                            <button type="button" onclick="cancelEdit({{ comment.id }})" class="bg-neutral-600 text-white px-2 py-1 rounded">Cancel</button>
+                                        </div>
+                                    </form>
                                 </div>
 
                                 {% if comment.author == user %}
                                 <div class="flex gap-2 text-neutral-400 shrink-0">
                                     <button type="button" onclick="editComment({{ comment.id }})" class="hover:text-blue-400"><i class="fas fa-edit"></i></button>
-                                    <form method="POST"
-                                        action="{% url 'delete_comment' comment.id %}"
-                                        onsubmit="deleteComment(event, this)">
+                                    <form method="POST" action="{% url 'delete_comment' comment.id %}">
                                         {% csrf_token %}
-
-                                        <button type="submit"
-                                                class="hover:text-red-400">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <button type="submit" onclick="return confirm('Delete?')" class="hover:text-red-400"><i class="fas fa-trash"></i></button>
                                     </form>
                                 </div>
                                 {% endif %}
@@ -350,7 +334,7 @@
                     </div>
 
                     <!-- Comment Input -->
-                    <form onsubmit="submitComment(event, {{ post.id }}); " class="border-t border-neutral-800/80 px-3 py-3 shrink-0">
+                    <form onsubmit="submitComment(event, {{ post.id }})" class="border-t border-neutral-800/80 px-3 py-3 shrink-0">
                         {% csrf_token %}
                         <div class="flex items-center gap-2">
                             {% if user.profile_picture %}
@@ -488,14 +472,9 @@ document.addEventListener("DOMContentLoaded", function () {
             const currentTimeEl = document.getElementById(`current-time-${postId}`);
             const durationEl = document.getElementById(`duration-${postId}`);
             const fillEl = document.getElementById(`progress-fill-${postId}`);
-            const progressBar = document.getElementById(`progress-bar-${postId}`); // wrapping track element
             const muteIcon = document.getElementById(`mute-icon-${postId}`);
-            const muteBtn = document.getElementById(`mute-btn-${postId}`) || muteIcon; // clickable target
 
-            const updateMuteIcon = () => {
-                if (muteIcon) muteIcon.className = video.muted ? "fas fa-volume-mute" : "fas fa-volume-up";
-            };
-            updateMuteIcon();
+            if (muteIcon) muteIcon.className = video.muted ? "fas fa-volume-mute" : "fas fa-volume-up";
 
             const showPlayIcon = (show, iconClass) => {
                 if (!playIcon) return;
@@ -520,54 +499,8 @@ document.addEventListener("DOMContentLoaded", function () {
             video.addEventListener("play", () => showPlayIcon(false));
             video.addEventListener("pause", () => showPlayIcon(true, "fas fa-play ml-1"));
 
+            // Show the paused icon immediately if the video hasn't autoplayed yet
             if (video.paused) showPlayIcon(true, "fas fa-play ml-1");
-
-            // --- Seek by clicking or dragging the progress bar ---
-            if (progressBar) {
-                let isDragging = false;
-
-                const seekToEvent = (e) => {
-                    const rect = progressBar.getBoundingClientRect();
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
-                    if (isFinite(video.duration) && video.duration > 0) {
-                        video.currentTime = ratio * video.duration;
-                        if (fillEl) fillEl.style.width = `${ratio * 100}%`;
-                        if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
-                    }
-                };
-
-                progressBar.addEventListener("mousedown", (e) => {
-                    isDragging = true;
-                    seekToEvent(e);
-                });
-                progressBar.addEventListener("touchstart", (e) => {
-                    isDragging = true;
-                    seekToEvent(e);
-                });
-
-                window.addEventListener("mousemove", (e) => {
-                    if (isDragging) seekToEvent(e);
-                });
-                window.addEventListener("touchmove", (e) => {
-                    if (isDragging) seekToEvent(e);
-                });
-
-                window.addEventListener("mouseup", () => { isDragging = false; });
-                window.addEventListener("touchend", () => { isDragging = false; });
-
-                // Simple click-to-seek fallback (covers the drag case too)
-                progressBar.addEventListener("click", seekToEvent);
-            }
-
-            // --- Mute toggle, click on the volume icon ---
-            if (muteBtn) {
-                muteBtn.addEventListener("click", (e) => {
-                    e.stopPropagation(); // don't trigger play/pause on the video
-                    video.muted = !video.muted;
-                    updateMuteIcon();
-                });
-            }
         }
 
         const img = card.querySelector("img.media-el");
@@ -627,12 +560,11 @@ document.addEventListener("DOMContentLoaded", function () {
             new MutationObserver(syncHeart).observe(mobileLikeBtn, { childList: true, subtree: true, attributes: true });
         }
     });
-    return false;
 });
-
+</script>
 
 <!-- Keep existing scroll/video observer JS functionality -->
-
+<script>
 document.addEventListener("DOMContentLoaded", function () {
     const videos = document.querySelectorAll("video");
 
@@ -776,237 +708,5 @@ document.addEventListener("DOMContentLoaded", function () {
         setTimeout(() => { wheelLocked = false; }, 500);
     }, { passive: false });
 });
-function deleteComment(event, form) {
-    event.preventDefault();
-
-    if (!confirm("Delete this comment?")) {
-        return;
-    }
-
-    const commentBox = form.closest(".bg-neutral-800\\/60");
-
-    fetch(form.action, {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]").value,
-            "X-Requested-With": "XMLHttpRequest"
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Remove comment from page
-            if (commentBox) {
-                commentBox.remove();
-            }
-
-            // Update comment count
-            const commentId = data.comment_id;
-
-            // Find the post containing this comment
-            const commentList = form.closest('[id^="comment-list-"]');
-
-            if (commentList) {
-                const postId = commentList.id.replace("comment-list-", "");
-
-                const mobileCount =
-                    document.getElementById(`comments-count-${postId}`);
-
-                const desktopCount =
-                    document.getElementById(`comments-count-desktop-${postId}`);
-
-                const tab =
-                    document.getElementById(`tab-comments-${postId}`);
-
-                if (mobileCount) {
-                    mobileCount.textContent =
-                        Math.max(0, parseInt(mobileCount.textContent) - 1);
-                }
-
-                if (desktopCount) {
-                    desktopCount.textContent =
-                        mobileCount ? mobileCount.textContent : "0";
-                }
-
-                if (tab) {
-                    const count = mobileCount
-                        ? mobileCount.textContent
-                        : "0";
-
-                    tab.textContent = `Comments (${count})`;
-                }
-            }
-        } else {
-            alert(data.message || "Unable to delete comment.");
-        }
-    })
-    .catch(error => {
-        console.error("Delete comment error:", error);
-        alert("Something went wrong.");
-    });
-}
-function saveComment(event, commentId, form) {
-
-    event.preventDefault();
-
-    const textarea = form.querySelector("textarea");
-    const content = textarea.value.trim();
-
-    if (!content) {
-        alert("Comment cannot be empty.");
-        return false;
-    }
-
-    const csrfToken = form.querySelector(
-        "[name=csrfmiddlewaretoken]"
-    ).value;
-
-    const saveButton = form.querySelector(
-        "button[type='submit']"
-    );
-
-    saveButton.disabled = true;
-    saveButton.textContent = "Saving...";
-
-    fetch(form.action, {
-        method: "POST",
-
-        headers: {
-            "X-CSRFToken": csrfToken,
-            "X-Requested-With": "XMLHttpRequest",
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-
-        body: new URLSearchParams({
-            content: content
-        })
-    })
-    .then(response => response.json())
-
-    .then(data => {
-
-        if (data.success) {
-
-            const commentText =
-                document.getElementById(
-                    `comment-text-${commentId}`
-                );
-
-            if (commentText) {
-                commentText.textContent = data.content;
-            }
-
-            form.classList.add("hidden");
-
-        } else {
-
-            alert(
-                data.message ||
-                "Unable to update comment."
-            );
-        }
-    })
-
-    .catch(error => {
-
-        console.error(
-            "Edit comment error:",
-            error
-        );
-
-        alert(
-            "A network error occurred."
-        );
-    })
-
-    .finally(() => {
-
-        saveButton.disabled = false;
-        saveButton.textContent = "Save";
-    });
-
-    return false;
-}
-
-function connectPostWebSocket(postId) {
-
-    const protocol =
-        window.location.protocol === "https:"
-            ? "wss"
-            : "ws";
-
-    const socket = new WebSocket(
-        `${protocol}://${window.location.host}/ws/post/${postId}/`
-    );
-
-    socket.onopen = function () {
-
-        console.log(
-            "WebSocket connected:",
-            postId
-        );
-    };
-
-    socket.onmessage = function (event) {
-
-        const data = JSON.parse(event.data);
-
-        console.log(
-            "WebSocket received:",
-            data
-        );
-
-        // -------------------------
-        // COMMENT EDITED
-        // -------------------------
-
-        if (data.type === "comment_edited") {
-
-            const commentText =
-                document.getElementById(
-                    `comment-text-${data.comment_id}`
-                );
-
-            if (commentText) {
-                commentText.textContent =
-                    data.comment;
-            }
-        }
-
-
-        // -------------------------
-        // COMMENT DELETED
-        // -------------------------
-
-        if (data.type === "comment_deleted") {
-
-            const comment =
-                document.getElementById(
-                    `comment-${data.comment_id}`
-                );
-
-            if (comment) {
-                comment.remove();
-            }
-        }
-    };
-
-    socket.onclose = function () {
-
-        console.log(
-            "WebSocket disconnected:",
-            postId
-        );
-    };
-
-    socket.onerror = function (error) {
-
-        console.error(
-            "WebSocket error:",
-            error
-        );
-    };
-
-    return socket;
-}</script>
+</script>
 {% endblock %}
