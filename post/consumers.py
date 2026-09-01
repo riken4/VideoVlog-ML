@@ -67,6 +67,7 @@ class PostConsumer(AsyncWebsocketConsumer):
                 "comment_id": event["comment_id"],
                 "author_id": event["author_id"],
                 "username": event["username"],
+                "profile_picture": event.get("profile_picture"),
                 "comment": event["comment"],
                 "time": event["time"]
             })

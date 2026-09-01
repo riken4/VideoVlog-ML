@@ -355,31 +355,61 @@ def following_feed_view(request):
 def create_post(request):
     if request.method == "POST":
         title = request.POST.get('title', '').strip()
-        content = request.POST.get('content')
+        content = request.POST.get('content', '').strip()
         video = request.FILES.get('video')
-        image = request.FILES.get('image')
 
-        if content:
-            post = Post.objects.create(
-                title=title,
-                content=content,
-                video=video,
-                image=image,
-                author=request.user
+        if not content:
+            messages.error(request, "Description / Content cannot be empty.")
+            return render(request, "pages/create_post.html", {
+                "form_title": title,
+                "form_content": content,
+            })
+
+        if not video:
+            messages.error(request, "Please select a video file. Only video posts are supported.")
+            return render(request, "pages/create_post.html", {
+                "form_title": title,
+                "form_content": content,
+            })
+
+        # Validate video file extension
+        allowed_extensions = ('.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v')
+        if not video.name.lower().endswith(allowed_extensions):
+            messages.error(request, "Invalid file format. Please upload a valid video file (MP4, WebM, MOV, MKV).")
+            return render(request, "pages/create_post.html", {
+                "form_title": title,
+                "form_content": content,
+            })
+
+        # Check content toxicity with ML moderation model
+        prediction = predict_comment(content)
+        if prediction == 1:
+            messages.error(
+                request,
+                "Your post contains inappropriate or abusive content and cannot be published."
             )
+            return render(request, "pages/create_post.html", {
+                "form_title": title,
+                "form_content": content,
+            })
 
-            # Retrain recommendation model
-            try:
-                train()
-            except Exception as e:
-                print(f"Recommender retrain failed: {e}")
+        post = Post.objects.create(
+            title=title,
+            content=content,
+            video=video,
+            author=request.user
+        )
 
-            messages.success(request, "Post created successfully")
-        else:
-            messages.error(request, "Content cannot be empty")
-            return redirect("home")
+        # Retrain recommendation model
+        try:
+            train()
+        except Exception as e:
+            print(f"Recommender retrain failed: {e}")
 
-    return redirect("home")
+        messages.success(request, "Video post published successfully!")
+        return redirect("home")
+
+    return render(request, "pages/create_post.html")
 
 
 @login_required
@@ -503,6 +533,7 @@ def comment_post(request, post_id):
                 comment=comment
             )
 
+        profile_picture_url = request.user.profile_picture.url if request.user.profile_picture else None
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             f"post_{post.id}",
@@ -511,15 +542,18 @@ def comment_post(request, post_id):
                 "comment_id": comment.id,
                 "author_id": request.user.id,
                 "username": request.user.username,
+                "profile_picture": profile_picture_url,
                 "comment": comment.content,
-                "time": timesince(comment.created_at)
+                "time": f"{timesince(comment.created_at)} ago"
             }
         )
 
         return JsonResponse({
             "success": True,
-            "username": request.user.username,
-            "comment": comment.content
+            "comment_id": comment.id,
+            "author_username": request.user.username,
+            "author_profile_picture": request.user.profile_picture.url if request.user.profile_picture else None,
+            "content": comment.content
         })
 
     return JsonResponse({"success": False})

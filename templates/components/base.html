@@ -30,15 +30,17 @@
                     <li>
                         <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
                             href="{% url 'home' %}">
+                            <i class="fas fa-home"></i>
                             For You
                         </a>
-                    </li>
+                    </li> 
                     <li>
                         <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
                             href="{% url 'following_feed' %}">
-                            Following
+                            <i class="fas fa-user-friends"></i> Following
                         </a>
                     </li>
+                    
                     <li>
                         <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
                             href="{% url 'search_users' %}">
@@ -46,15 +48,10 @@
                         </a>
                     </li>
                     <li>
-                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
-                            href="{% url 'home' %}">
-                            <i class="fas fa-home"></i> Home
-                        </a>
-                    </li>
-                    <li>
-                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
-                            href="{% url 'following_feed' %}">
-                            <i class="fas fa-user-friends"></i> Following
+                        <a class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold text-white bg-[#fe2c55] hover:bg-[#e0264a] transition shadow-sm text-sm"
+                            href="{% url 'create_post' %}">
+                            <i class="fas fa-plus"></i>
+                            <span>Create</span>
                         </a>
                     </li>
                     <li class="relative">
@@ -462,20 +459,28 @@
 
                         const csrfToken = getCookie('csrftoken');
 
+                        const initial = ((data.username || '?').charAt(0)).toUpperCase();
+                        const avatarHTML = data.profile_picture
+                            ? `<img src="${data.profile_picture}" class="w-full h-full object-cover">`
+                            : `<div class="w-full h-full bg-neutral-700 flex items-center justify-center text-white font-bold text-xs">${initial}</div>`;
+
                         // Build the comment HTML
                         let commentHTML = `
                     <div class="bg-neutral-800/60 rounded-xl p-3 text-xs" id="comment-${data.comment_id}">
-                        <div class="flex justify-between items-start gap-2">
-                            <div class="flex-1">
-                                <span class="font-bold text-neutral-300">@${data.username}</span>
+                        <div class="flex items-start gap-2.5">
+                            <a href="/accounts/profile/${encodeURIComponent(data.username)}/" class="block w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                ${avatarHTML}
+                            </a>
 
-                                <div id="comment-text-${data.comment_id}" class="text-neutral-100 mt-1">
-                                    ${data.comment}
+                            <div class="flex-1 min-w-0">
+                                <span class="font-bold text-neutral-300">${escapeHtml(data.username)}</span>
+
+                                <div id="comment-text-${data.comment_id}" class="text-neutral-100 mt-1 break-words">
+                                    ${escapeHtml(data.comment)}
                                 </div>
 
                                 <div class="flex items-center gap-3 mt-1 text-neutral-500">
-                                    <span>${data.time}</span>
-                                    <button type="button" class="hover:text-neutral-300">Reply</button>
+                                    <span>${escapeHtml(data.time)}</span>
                                 </div>
 
                                 <!-- Comment Edit Form -->
@@ -487,7 +492,7 @@
                                     <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
                                     <textarea name="content"
                                             rows="2"
-                                            class="w-full bg-neutral-700 text-white rounded p-2 text-xs focus:outline-none">${data.comment}</textarea>
+                                            class="w-full bg-neutral-700 text-white rounded p-2 text-xs focus:outline-none">${escapeHtml(data.comment)}</textarea>
 
                                     <div class="flex gap-2 mt-1">
                                         <button type="submit"

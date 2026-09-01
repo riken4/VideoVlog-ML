@@ -27,8 +27,6 @@
 {% block content %}
 <div class="relative h-screen h-dvh overflow-hidden pt-6 font-sans" id="tiktokContainer">
 
-   
-
     {% if posts %}
         <!-- Prev/Next vertical navigation controls -->
         <div class="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 flex-col gap-3 z-30">
@@ -45,22 +43,26 @@
         <!-- Main Vertical Feed Track -->
         <div class="transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" id="tiktokTrack">
 
+            <!-- Feed Slides -->
             {% for post in posts %}
             <div class="h-screen h-dvh w-full box-border flex items-center justify-center p-0 sm:p-4 overflow-y-auto tiktok-slide">
+
                 <div class="relative flex flex-col lg:flex-row items-center justify-center w-full max-w-[900px] h-full sm:h-[88vh] gap-0 lg:gap-4 mx-auto">
 
-                    <!-- Video Container -->
+                    <!-- Main Media Area (TikTok Player Screen) -->
                     <div class="post-card relative w-full lg:w-[420px] h-full bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-2xl" data-post-id="{{ post.id }}">
 
+                        <!-- Media element -->
                         {% if post.video %}
-                            <video src="{{ post.video.url }}"
-                                    id="video-{{ post.id }}"
-                                    data-post-id="{{ post.id }}"
-                                    class="media-el w-full h-full object-cover bg-black"
-                                    loop playsinline muted>
+                            <video id="video-{{ post.id }}"
+                                   src="{{ post.video.url }}"
+                                   poster="{% if post.thumbnail %}{{ post.thumbnail.url }}{% endif %}"
+                                   data-post-id="{{ post.id }}"
+                                   class="media-el w-full h-full object-cover bg-black"
+                                   loop playsinline muted>
                             </video>
 
-                            <!-- Click-to-toggle overlay -->
+                            <!-- Click-to-toggle overlay (covers the whole player, sits below the action bar / caption) -->
                             <button type="button" onclick="togglePlay('{{ post.id }}')"
                                     class="absolute inset-0 z-10 flex items-center justify-center focus:outline-none">
                                 <span id="play-icon-{{ post.id }}" class="hidden items-center justify-center w-16 h-16 rounded-full bg-black/45 backdrop-blur-sm text-white text-2xl transition">
@@ -91,20 +93,21 @@
                             </div>
                         {% endif %}
 
-                        <!-- Bottom Gradient Overlay -->
+                        <!-- Bottom Gradient Overlay for text readability (mobile only) -->
                         <div class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none lg:hidden"></div>
 
-                        <!-- Bottom Left Metadata Info Overlay -->
+                        <!-- Bottom Left Metadata Info Overlay (mobile / tablet only) -->
                         <div class="absolute bottom-4 left-4 right-16 text-white z-10 space-y-2 pointer-events-auto lg:hidden">
                             <div class="flex items-center gap-2">
                                 <a href="{% url 'profile' post.author.username %}" class="font-bold text-base hover:underline drop-shadow">
                                     @{{ post.author.username }}
                                 </a>
+                                <span class="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full font-medium">Following</span>
                                 <span class="text-xs text-neutral-300">• {{ post.created_at|timesince }} ago</span>
                             </div>
 
                             {% if post.title %}
-                                <h3 class="font-semibold text-sm drop-shadow">{{ post.title }}</h3>
+                                <h3 class="font-semibold text-sm drop-shadow text-white">{{ post.title }}</h3>
                             {% endif %}
 
                             <p class="text-xs sm:text-sm text-neutral-200 line-clamp-2 drop-shadow">
@@ -112,7 +115,7 @@
                             </p>
                         </div>
 
-                        <!-- TikTok Right Action Bar -->
+                        <!-- TikTok Right Action Bar (floats on video, mobile / tablet only) -->
                         <div class="absolute right-3 bottom-6 flex flex-col items-center gap-4 z-20 lg:hidden">
 
                             <!-- Author Avatar -->
@@ -150,13 +153,32 @@
                                     {{ post.total_comments }}
                                 </span>
                             </div>
+
+                            <!-- Options Dropdown for Post Owner -->
+                            {% if post.author == user %}
+                            <div class="relative">
+                                <button class="w-11 h-11 rounded-full bg-neutral-900/40 backdrop-blur-md flex items-center justify-center text-xl text-white"
+                                        onclick="this.nextElementSibling.classList.toggle('hidden')">
+                                    <i class="fas fa-ellipsis-h"></i>
+                                </button>
+                                <ul class="hidden absolute right-12 bottom-0 w-32 bg-neutral-800 rounded-xl shadow-xl border border-neutral-700 py-1 z-30 text-xs">
+                                    <li><a class="block px-4 py-2 hover:bg-neutral-700 text-white" href="{% url 'edit_post' post.id %}">Edit</a></li>
+                                    <li>
+                                        <form method="post" action="{% url 'delete_post' post.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="w-full text-left px-4 py-2 text-red-500 hover:bg-neutral-700" onclick="return confirm('Delete post?')">Delete</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <!-- Desktop Sidebar Comment / Details Panel -->
+                    <!-- Info / Comment Panel — persistent sidebar on desktop, slide-up drawer on mobile -->
                     <div class="comment-section hidden lg:flex flex-col w-full lg:w-[380px] h-[55vh] lg:h-full bg-neutral-900 border border-neutral-800 lg:rounded-2xl overflow-hidden z-20 shadow-2xl" id="comments-{{ post.id }}">
 
-                        <!-- Header: Author + Info -->
+                        <!-- Desktop-only header: author + caption -->
                         <div class="hidden lg:block px-4 pt-4 pb-3 border-b border-neutral-800/80">
                             <div class="flex items-center gap-2 mb-3">
                                 <a href="{% url 'profile' post.author.username %}" class="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-neutral-700">
@@ -184,7 +206,7 @@
                             </p>
                         </div>
 
-                        <!-- Like / Comment Row -->
+                        <!-- Desktop-only like / comment count row -->
                         <div class="hidden lg:flex items-center gap-6 px-4 py-3 border-b border-neutral-800/80">
                             <button type="button" id="like-btn-desktop-{{ post.id }}" onclick="likePost({{ post.id }}, this)"
                                     class="like-btn-desktop flex flex-col items-center gap-1 transition active:scale-110 {% if post.id in user_likes %}text-[#fe2c55]{% else %}text-neutral-300{% endif %}">
@@ -192,14 +214,15 @@
                                 <span id="likes-count-desktop-{{ post.id }}" class="text-xs font-semibold text-neutral-300">{{ post.total_likes }}</span>
                             </button>
                             <button type="button" class="flex flex-col items-center gap-1 text-neutral-300">
-                                <i class="fas fa-comment text-xl"></i>
+                                <i class="fa-regular fa-comment"></i>
                                 <span id="comments-count-desktop-{{ post.id }}" class="text-xs font-semibold text-neutral-300">{{ post.total_comments }}</span>
                             </button>
                         </div>
 
                         <!-- Desktop-only tabs -->
                         <div class="hidden lg:flex items-center gap-6 px-4 border-b border-neutral-800/80">
-                            <button type="button" class="py-3 text-sm font-semibold text-white">
+                            <button type="button" id="tab-comments-{{ post.id }}"
+                                    class="tab-btn tab-active py-3 text-sm font-semibold">
                                 Comments ({{ post.total_comments }})
                             </button>
                         </div>
@@ -215,25 +238,91 @@
                         <!-- Scrollable list of comments -->
                         <div id="comment-list-{{ post.id }}" class="block flex-1 overflow-y-auto custom-scrollbar px-4 py-3 space-y-3">
                             {% for comment in post.comments.all %}
-                            <div class="bg-neutral-800/60 rounded-xl p-3 text-xs">
-                                <span class="font-bold text-neutral-300">@{{ comment.author.username }}</span>
-                                <div class="text-neutral-100 mt-1">{{ comment.content }}</div>
-                                <div class="text-[10px] text-neutral-500 mt-1">{{ comment.created_at|timesince }} ago</div>
+                            <div class="bg-neutral-800/60 rounded-xl p-3 text-xs" id="comment-{{ comment.id }}">
+                                <div class="flex items-start gap-2.5">
+                                    <!-- Comment Author Profile Picture -->
+                                    <a href="{% url 'profile' comment.author.username %}" class="block w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                        {% if comment.author.profile_picture %}
+                                            <img src="{{ comment.author.profile_picture.url }}" class="w-full h-full object-cover">
+                                        {% else %}
+                                            <div class="w-full h-full bg-neutral-700 flex items-center justify-center text-white font-bold text-xs">
+                                                {{ comment.author.username|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                    </a>
+
+                                    <div class="flex-1 min-w-0">
+                                        <span class="font-bold text-neutral-300">{{ comment.author.username }}</span>
+
+                                        <div id="comment-text-{{ comment.id }}" class="text-neutral-100 mt-1 break-words">
+                                            {{ comment.content }}
+                                        </div>
+
+                                        <div class="flex items-center gap-3 mt-1 text-neutral-500">
+                                            <span>{{ comment.created_at|timesince }} ago</span>
+                                        </div>
+
+                                        <!-- Comment Edit Form -->
+                                        <form id="edit-form-{{ comment.id }}"
+                                              method="POST"
+                                              action="{% url 'edit_comment' comment.id %}"
+                                              class="hidden mt-2"
+                                              onsubmit="return saveComment(event, {{ comment.id }}, this)">
+                                            {% csrf_token %}
+                                            <textarea name="content"
+                                                      rows="2"
+                                                      class="w-full bg-neutral-700 text-white rounded p-2 text-xs focus:outline-none">{{ comment.content }}</textarea>
+
+                                            <div class="flex gap-2 mt-1">
+                                                <button type="submit" class="bg-blue-600 text-white px-2 py-1 rounded">
+                                                    Save
+                                                </button>
+                                                <button type="button" onclick="cancelEdit({{ comment.id }})" class="bg-neutral-600 text-white px-2 py-1 rounded">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    {% if comment.author == user %}
+                                    <div class="flex gap-2 text-neutral-400 shrink-0">
+                                        <button type="button" onclick="editComment({{ comment.id }})" class="hover:text-blue-400" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form method="POST" action="{% url 'delete_comment' comment.id %}" onsubmit="deleteComment(event, this)">
+                                            {% csrf_token %}
+                                            <button type="submit" class="hover:text-red-400" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </div>
-                            {% empty %}
-                            <div class="text-center py-6 text-neutral-500 text-xs">No comments yet.</div>
                             {% endfor %}
                         </div>
 
-                        <!-- Comment input -->
-                        <div class="p-3 border-t border-neutral-800 bg-neutral-900">
-                            <form onsubmit="return submitComment(event, '{{ post.id }}')" class="flex gap-2">
-                                {% csrf_token %}
-                                <input type="text" id="comment-input-{{ post.id }}" placeholder="Add comment..."
-                                        class="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#fe2c55]">
-                                <button type="submit" class="text-[#fe2c55] font-semibold text-xs px-2 hover:opacity-80">Post</button>
-                            </form>
-                        </div>
+                        <!-- Comment Input -->
+                        <form onsubmit="submitComment(event, {{ post.id }});" class="border-t border-neutral-800/80 px-3 py-3 shrink-0">
+                            {% csrf_token %}
+                            <div class="flex items-center gap-2">
+                                {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture.url }}" class="w-8 h-8 rounded-full object-cover shrink-0">
+                                {% else %}
+                                    <div class="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                        {{ user.username|first|upper }}
+                                    </div>
+                                {% endif %}
+                                <div class="relative flex-1">
+                                    <input id="comment-input-{{ post.id }}" type="text" name="content"
+                                           class="w-full bg-neutral-800 border border-neutral-700 rounded-full pl-4 pr-16 py-2 text-xs text-white focus:outline-none focus:border-neutral-500"
+                                           placeholder="Add comment..." required>
+                                </div>
+                                <button type="submit" class="w-8 h-8 rounded-full bg-[#fe2c55] hover:bg-[#e0264a] text-white flex items-center justify-center transition shrink-0">
+                                    <i class="fas fa-paper-plane text-xs"></i>
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
                 </div>
@@ -309,16 +398,26 @@
     {% endif %}
 
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
-// Video Player Controls & TikTok Scrolling
-function formatTime(seconds) {
-    if (!isFinite(seconds) || seconds < 0) return "0:00";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
+function toggleComments(postId) {
+    const el = document.getElementById(`comments-${postId}`);
+    if (el) {
+        if (el.classList.contains('hidden')) {
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        } else {
+            el.classList.remove('flex');
+            el.classList.add('hidden');
+        }
+    }
+}
+
+function formatTime(totalSeconds) {
+    if (!isFinite(totalSeconds) || totalSeconds < 0) return "0:00";
+    const m = Math.floor(totalSeconds / 60);
+    const s = Math.floor(totalSeconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function togglePlay(postId) {
@@ -334,21 +433,180 @@ function togglePlay(postId) {
 function toggleMute(postId) {
     const video = document.getElementById(`video-${postId}`);
     const icon = document.getElementById(`mute-icon-${postId}`);
-    if (!video) return;
+    if (!video || !icon) return;
     video.muted = !video.muted;
-    if (icon) {
-        icon.className = video.muted ? "fas fa-volume-mute" : "fas fa-volume-up";
+    icon.className = video.muted ? "fas fa-volume-mute" : "fas fa-volume-up";
+}
+
+function seekVideo(postId, evt) {
+    const video = document.getElementById(`video-${postId}`);
+    const track = document.getElementById(`progress-track-${postId}`);
+    if (!video || !track || !isFinite(video.duration)) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.min(Math.max((evt.clientX - rect.left) / rect.width, 0), 1);
+    video.currentTime = ratio * video.duration;
+}
+
+// Auto-detect landscape vs portrait media so wide videos/images letterbox
+// inside the portrait player instead of being cropped by object-cover.
+function applyOrientation(el, width, height) {
+    if (!width || !height) return;
+    if (width > height) {
+        el.classList.remove("object-cover");
+        el.classList.add("object-contain");
+    } else {
+        el.classList.remove("object-contain");
+        el.classList.add("object-cover");
     }
 }
 
-function seekVideo(postId, event) {
-    const video = document.getElementById(`video-${postId}`);
-    const track = document.getElementById(`progress-track-${postId}`);
-    if (!video || !track || !isFinite(video.duration) || video.duration <= 0) return;
-    const rect = track.getBoundingClientRect();
-    const ratio = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
-    video.currentTime = ratio * video.duration;
-}
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".post-card").forEach(function (card) {
+        const postId = card.dataset.postId;
+        if (!postId) return;
+
+        const video = document.getElementById(`video-${postId}`);
+        if (video) {
+            const playIcon = document.getElementById(`play-icon-${postId}`);
+            const currentTimeEl = document.getElementById(`current-time-${postId}`);
+            const durationEl = document.getElementById(`duration-${postId}`);
+            const fillEl = document.getElementById(`progress-fill-${postId}`);
+            const progressBar = document.getElementById(`progress-bar-${postId}`);
+            const muteIcon = document.getElementById(`mute-icon-${postId}`);
+            const muteBtn = document.getElementById(`mute-btn-${postId}`) || muteIcon;
+
+            const updateMuteIcon = () => {
+                if (muteIcon) muteIcon.className = video.muted ? "fas fa-volume-mute" : "fas fa-volume-up";
+            };
+            updateMuteIcon();
+
+            const showPlayIcon = (show, iconClass) => {
+                if (!playIcon) return;
+                playIcon.classList.toggle("hidden", !show);
+                playIcon.classList.toggle("flex", show);
+                const i = playIcon.querySelector("i");
+                if (i && iconClass) i.className = iconClass;
+            };
+
+            video.addEventListener("loadedmetadata", function () {
+                applyOrientation(video, video.videoWidth, video.videoHeight);
+                if (durationEl) durationEl.textContent = formatTime(video.duration);
+            });
+
+            video.addEventListener("timeupdate", function () {
+                if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
+                if (fillEl && isFinite(video.duration) && video.duration > 0) {
+                    fillEl.style.width = `${(video.currentTime / video.duration) * 100}%`;
+                }
+            });
+
+            video.addEventListener("play", () => showPlayIcon(false));
+            video.addEventListener("pause", () => showPlayIcon(true, "fas fa-play ml-1"));
+
+            if (video.paused) showPlayIcon(true, "fas fa-play ml-1");
+
+            // --- Seek by clicking or dragging the progress bar ---
+            if (progressBar) {
+                let isDragging = false;
+
+                const seekToEvent = (e) => {
+                    const rect = progressBar.getBoundingClientRect();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+                    if (isFinite(video.duration) && video.duration > 0) {
+                        video.currentTime = ratio * video.duration;
+                        if (fillEl) fillEl.style.width = `${ratio * 100}%`;
+                        if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
+                    }
+                };
+
+                progressBar.addEventListener("mousedown", (e) => {
+                    isDragging = true;
+                    seekToEvent(e);
+                });
+                progressBar.addEventListener("touchstart", (e) => {
+                    isDragging = true;
+                    seekToEvent(e);
+                });
+
+                window.addEventListener("mousemove", (e) => {
+                    if (isDragging) seekToEvent(e);
+                });
+                window.addEventListener("touchmove", (e) => {
+                    if (isDragging) seekToEvent(e);
+                });
+
+                window.addEventListener("mouseup", () => { isDragging = false; });
+                window.addEventListener("touchend", () => { isDragging = false; });
+
+                progressBar.addEventListener("click", seekToEvent);
+            }
+
+            // --- Mute toggle ---
+            if (muteBtn) {
+                muteBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    video.muted = !video.muted;
+                    updateMuteIcon();
+                });
+            }
+        }
+
+        const img = card.querySelector("img.media-el");
+        if (img) {
+            if (img.complete && img.naturalWidth) {
+                applyOrientation(img, img.naturalWidth, img.naturalHeight);
+            } else {
+                img.addEventListener("load", function () {
+                    applyOrientation(img, img.naturalWidth, img.naturalHeight);
+                });
+            }
+        }
+    });
+});
+
+// Mirror like/comment counters between mobile and desktop
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".post-card").forEach(function (card) {
+        const postId = card.dataset.postId;
+        if (!postId) return;
+
+        const mirrors = [
+            { source: `likes-count-${postId}`, target: `likes-count-desktop-${postId}` },
+            { source: `comments-count-${postId}`, target: `comments-count-desktop-${postId}` },
+        ];
+
+        mirrors.forEach(function ({ source, target }) {
+            const sourceEl = document.getElementById(source);
+            const targetEl = document.getElementById(target);
+            if (!sourceEl || !targetEl) return;
+
+            targetEl.textContent = sourceEl.textContent;
+            new MutationObserver(function () {
+                targetEl.textContent = sourceEl.textContent;
+            }).observe(sourceEl, { childList: true, characterData: true, subtree: true });
+        });
+
+        const mobileLikeBtn = document.getElementById(`like-btn-${postId}`);
+        const desktopLikeBtn = document.getElementById(`like-btn-desktop-${postId}`);
+        if (mobileLikeBtn && desktopLikeBtn) {
+            const syncHeart = function () {
+                const liked = mobileLikeBtn.classList.contains('text-[#fe2c55]');
+                desktopLikeBtn.classList.toggle('text-[#fe2c55]', liked);
+                desktopLikeBtn.classList.toggle('text-neutral-300', !liked);
+
+                const mobileIcon = mobileLikeBtn.querySelector('i');
+                const desktopIcon = desktopLikeBtn.querySelector('i');
+                if (mobileIcon && desktopIcon) {
+                    desktopIcon.className = mobileIcon.className;
+                }
+            };
+            syncHeart();
+            new MutationObserver(syncHeart).observe(mobileLikeBtn, { attributes: true, attributeFilter: ['class'] });
+            new MutationObserver(syncHeart).observe(mobileLikeBtn, { childList: true, subtree: true, attributes: true });
+        }
+    });
+});
 
 document.addEventListener("DOMContentLoaded", function () {
     const videos = document.querySelectorAll("video");
@@ -389,7 +647,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         "Content-Type": "application/json",
                         "X-CSRFToken": "{{ csrf_token }}"
                     },
-                    body: JSON.stringify({ post_id: postId, duration: curTime })
+                    body: JSON.stringify({
+                        post_id: postId,
+                        duration: curTime
+                    })
                 }).catch(() => {});
             }
         };
@@ -431,21 +692,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 body: JSON.stringify({ post_id: postId })
             }).catch(() => {});
-        });
-
-        const durationEl = document.getElementById(`duration-${postId}`);
-        const currentTimeEl = document.getElementById(`current-time-${postId}`);
-        const fillEl = document.getElementById(`progress-fill-${postId}`);
-
-        video.addEventListener("loadedmetadata", function () {
-            if (durationEl) durationEl.textContent = formatTime(video.duration);
-        });
-
-        video.addEventListener("timeupdate", function () {
-            if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
-            if (fillEl && isFinite(video.duration) && video.duration > 0) {
-                fillEl.style.width = `${(video.currentTime / video.duration) * 100}%`;
-            }
         });
     });
 
@@ -495,17 +741,303 @@ document.addEventListener("DOMContentLoaded", function () {
     container.addEventListener("wheel", function (e) {
         const slide = e.target.closest(".tiktok-slide");
         if (!slide) return;
+
         const atTop = slide.scrollTop <= 0;
         const atBottom = Math.ceil(slide.scrollTop + slide.clientHeight) >= slide.scrollHeight;
+
         if (e.deltaY > 0 && !atBottom) return;
         if (e.deltaY < 0 && !atTop) return;
+
         e.preventDefault();
         if (wheelLocked) return;
         wheelLocked = true;
-        if (e.deltaY > 0) goToSlide(currentIndex + 1);
-        else if (e.deltaY < 0) goToSlide(currentIndex - 1);
+
+        if (e.deltaY > 0) {
+            goToSlide(currentIndex + 1);
+        } else if (e.deltaY < 0) {
+            goToSlide(currentIndex - 1);
+        }
+
         setTimeout(() => { wheelLocked = false; }, 500);
     }, { passive: false });
+});
+
+function deleteComment(event, form) {
+    event.preventDefault();
+
+    if (!confirm("Delete this comment?")) {
+        return;
+    }
+
+    const commentBox = form.closest(".bg-neutral-800\\/60");
+
+    fetch(form.action, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]").value,
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (commentBox) {
+                commentBox.remove();
+            }
+
+            const commentList = form.closest('[id^="comment-list-"]');
+            if (commentList) {
+                const postId = commentList.id.replace("comment-list-", "");
+                const mobileCount = document.getElementById(`comments-count-${postId}`);
+                const desktopCount = document.getElementById(`comments-count-desktop-${postId}`);
+                const tab = document.getElementById(`tab-comments-${postId}`);
+
+                if (mobileCount) {
+                    mobileCount.textContent = Math.max(0, parseInt(mobileCount.textContent) - 1);
+                }
+                if (desktopCount) {
+                    desktopCount.textContent = mobileCount ? mobileCount.textContent : "0";
+                }
+                if (tab) {
+                    const count = mobileCount ? mobileCount.textContent : "0";
+                    tab.textContent = `Comments (${count})`;
+                }
+            }
+        } else {
+            alert(data.message || "Unable to delete comment.");
+        }
+    })
+    .catch(error => {
+        console.error("Delete comment error:", error);
+        alert("Something went wrong.");
+    });
+}
+
+function saveComment(event, commentId, form) {
+    event.preventDefault();
+
+    const textarea = form.querySelector("textarea");
+    const content = textarea.value.trim();
+
+    if (!content) {
+        alert("Comment cannot be empty.");
+        return false;
+    }
+
+    const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]").value;
+    const saveButton = form.querySelector("button[type='submit']");
+
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving...";
+
+    fetch(form.action, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest",
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams({ content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const commentText = document.getElementById(`comment-text-${commentId}`);
+            if (commentText) {
+                commentText.textContent = data.content;
+            }
+            form.classList.add("hidden");
+        } else {
+            alert(data.message || "Unable to update comment.");
+        }
+    })
+    .catch(error => {
+        console.error("Edit comment error:", error);
+        alert("A network error occurred.");
+    })
+    .finally(() => {
+        saveButton.disabled = false;
+        saveButton.textContent = "Save";
+    });
+
+    return false;
+}
+
+function submitComment(event, postId) {
+    event.preventDefault();
+
+    const form = event.target;
+    const input = form.querySelector('input[name="content"]');
+    const content = input.value.trim();
+
+    if (!content) {
+        alert("Comment cannot be empty.");
+        return;
+    }
+
+    const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+    fetch(`/comment/${postId}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest",
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams({ content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Create the new comment HTML with profile picture
+            const commentHTML = `
+                <div class="bg-neutral-800/60 rounded-xl p-3 text-xs">
+                    <div class="flex justify-between items-start gap-2">
+                        <a href="/profile/${data.author_username}/" class="block w-8 h-8 rounded-full overflow-hidden shrink-0">
+                            ${data.author_profile_picture 
+                                ? `<img src="${data.author_profile_picture}" class="w-full h-full object-cover">` 
+                                : `<div class="w-full h-full bg-neutral-700 flex items-center justify-center text-white font-bold text-xs">
+                                    ${data.author_username.charAt(0).toUpperCase()}
+                                  </div>`
+                            }
+                        </a>
+                        <div class="flex-1">
+                            <span class="font-bold text-neutral-300">${data.author_username}</span>
+                            <div id="comment-text-${data.comment_id}" class="text-neutral-100 mt-1 break-words">
+                                ${data.content}
+                            </div>
+                            <div class="flex items-center gap-3 mt-1 text-neutral-500">
+                                <span>now</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add the comment to the comment list
+            const commentList = document.getElementById(`comment-list-${postId}`);
+            if (commentList) {
+                commentList.insertAdjacentHTML('beforeend', commentHTML);
+            }
+
+            // Clear the input
+            input.value = "";
+
+            // Update comment count
+            const mobileCount = document.getElementById(`comments-count-${postId}`);
+            const desktopCount = document.getElementById(`comments-count-desktop-${postId}`);
+            const tab = document.getElementById(`tab-comments-${postId}`);
+
+            if (mobileCount) {
+                const count = parseInt(mobileCount.textContent) + 1;
+                mobileCount.textContent = count;
+            }
+
+            if (desktopCount) {
+                const count = mobileCount ? parseInt(mobileCount.textContent) : 0;
+                desktopCount.textContent = count;
+            }
+
+            if (tab) {
+                const count = mobileCount ? mobileCount.textContent : "0";
+                tab.textContent = `Comments (${count})`;
+            }
+        } else {
+            alert(data.message || "Unable to post comment.");
+        }
+    })
+    .catch(error => {
+        console.error("Submit comment error:", error);
+        alert("Something went wrong.");
+    });
+}
+
+function connectPostWebSocket(postId) {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}/ws/post/${postId}/`);
+
+    socket.onopen = function () {
+        console.log("WebSocket connected:", postId);
+    };
+
+    socket.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket received:", data);
+
+        // -------------------------
+        // COMMENT POSTED (Real-time count update)
+        // -------------------------
+        if (data.type === "comment_update") {
+            const mobileCount = document.getElementById(`comments-count-${postId}`);
+            const desktopCount = document.getElementById(`comments-count-desktop-${postId}`);
+            const tab = document.getElementById(`tab-comments-${postId}`);
+
+            if (mobileCount) {
+                const count = parseInt(mobileCount.textContent) + 1;
+                mobileCount.textContent = count;
+            }
+
+            if (desktopCount) {
+                const count = mobileCount ? parseInt(mobileCount.textContent) : "0";
+                desktopCount.textContent = count;
+            }
+
+            if (tab) {
+                const count = mobileCount ? mobileCount.textContent : "0";
+                tab.textContent = `Comments (${count})`;
+            }
+        }
+
+        // -------------------------
+        // COMMENT DELETED
+        // -------------------------
+        if (data.type === "comment_deleted") {
+            const comment = document.getElementById(`comment-${data.comment_id}`);
+            if (comment) {
+                comment.remove();
+            }
+
+            // Update comment count
+            const mobileCount = document.getElementById(`comments-count-${postId}`);
+            const desktopCount = document.getElementById(`comments-count-desktop-${postId}`);
+            const tab = document.getElementById(`tab-comments-${postId}`);
+
+            if (mobileCount) {
+                const count = Math.max(0, parseInt(mobileCount.textContent) - 1);
+                mobileCount.textContent = count;
+            }
+
+            if (desktopCount) {
+                const count = mobileCount ? mobileCount.textContent : "0";
+                desktopCount.textContent = count;
+            }
+
+            if (tab) {
+                const count = mobileCount ? mobileCount.textContent : "0";
+                tab.textContent = `Comments (${count})`;
+            }
+        }
+    };
+
+    socket.onclose = function () {
+        console.log("WebSocket disconnected:", postId);
+    };
+
+    socket.onerror = function (error) {
+        console.error("WebSocket error:", error);
+    };
+
+    return socket;
+}
+
+// Initialize WebSocket connections on page load
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".post-card").forEach(function (card) {
+        const postId = card.dataset.postId;
+        if (postId) {
+            connectPostWebSocket(postId);
+        }
+    });
 });
 </script>
 {% endblock %}
