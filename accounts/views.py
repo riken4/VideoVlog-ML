@@ -381,12 +381,25 @@ def create_post(request):
                 "form_content": content,
             })
 
-        # Check content toxicity with ML moderation model
-        prediction = predict_comment(content)
-        if prediction == 1:
+        # Check title toxicity with ML moderation model
+        if title:
+            title_prediction = predict_comment(title)
+            if title_prediction == 1:
+                messages.error(
+                    request,
+                    "Your post title contains inappropriate or abusive content and cannot be published."
+                )
+                return render(request, "pages/create_post.html", {
+                    "form_title": title,
+                    "form_content": content,
+                })
+
+        # Check content/description toxicity with ML moderation model
+        content_prediction = predict_comment(content)
+        if content_prediction == 1:
             messages.error(
                 request,
-                "Your post contains inappropriate or abusive content and cannot be published."
+                "Your post description contains inappropriate or abusive content and cannot be published."
             )
             return render(request, "pages/create_post.html", {
                 "form_title": title,
@@ -417,20 +430,30 @@ def edit_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
 
     if request.method == "POST":
+        title = request.POST.get("title", "").strip()
         content = request.POST.get("content")
 
-        # Check the edited content
-        prediction = predict_comment(content)
+        # Check the edited title
+        if title:
+            title_prediction = predict_comment(title)
+            if title_prediction == 1:
+                messages.error(
+                    request,
+                    "Your post title contains inappropriate content and cannot be updated."
+                )
+                return redirect("edit_post", post_id=post.id)
 
-        # Reject toxic content
-        if prediction == 1:
+        # Check the edited content/description
+        content_prediction = predict_comment(content)
+        if content_prediction == 1:
             messages.error(
                 request,
-                "Your post contains inappropriate content and cannot be updated."
+                "Your post description contains inappropriate content and cannot be updated."
             )
             return redirect("edit_post", post_id=post.id)
 
         # Update post if content is safe
+        post.title = title
         post.content = content
         post.is_edited = True
         post.save()
@@ -734,28 +757,28 @@ def set_password(request):
     return render(request, 'pages/set_password.html')
 
 
-@staff_member_required
-def admin_users(request):
-    users = CustomUser.objects.all().order_by("-created_at")
-    context = {"users": users}
-    return render(request, "admin/users.html", context)
+# @staff_member_required
+# def admin_users(request):
+#     users = CustomUser.objects.all().order_by("-created_at")
+#     context = {"users": users}
+#     return render(request, "admin/users.html", context)
 
 
-@staff_member_required
-def admin_user_detail(request, user_id):
-    user = get_object_or_404(CustomUser, id=user_id)
-    posts = Post.objects.filter(author=user).order_by("-created_at")
-    followers = Follow.objects.filter(following=user).select_related("follower")
-    following = Follow.objects.filter(follower=user).select_related("following")
-    likes_count = Like.objects.filter(user=user).count()
-    comments_count = Comment.objects.filter(author=user).count()
+# @staff_member_required
+# def admin_user_detail(request, user_id):
+#     user = get_object_or_404(CustomUser, id=user_id)
+#     posts = Post.objects.filter(author=user).order_by("-created_at")
+#     followers = Follow.objects.filter(following=user).select_related("follower")
+#     following = Follow.objects.filter(follower=user).select_related("following")
+#     likes_count = Like.objects.filter(user=user).count()
+#     comments_count = Comment.objects.filter(author=user).count()
 
-    context = {
-        "user": user,
-        "posts": posts,
-        "followers": followers,
-        "following": following,
-        "likes_count": likes_count,
-        "comments_count": comments_count,
-    }
-    return render(request, "admin/user_detail.html", context)
+#     context = {
+#         "user": user,
+#         "posts": posts,
+#         "followers": followers,
+#         "following": following,
+#         "likes_count": likes_count,
+#         "comments_count": comments_count,
+#     }
+#     return render(request, "admin/user_detail.html", context)

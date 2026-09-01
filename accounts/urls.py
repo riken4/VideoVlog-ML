@@ -22,8 +22,8 @@ from .views import (
     verify_otp,
     set_password,
     edit_comment,
-    admin_users,
-    admin_user_detail,
+    # admin_users,
+    # admin_user_detail,
     search_users,
     following_feed_view,
 )
@@ -54,12 +54,12 @@ urlpatterns = [
     path("forgot_password", forgot_password, name="forgot_password"),
     path("verify_otp", verify_otp, name="verify_otp"),
     path("set_password", set_password, name="set_password"),
-    path("admin/users/", admin_users, name="admin_users"),
+    # path("admin/users/", admin_users, name="admin_users"),
 
-    path(
-        "admin/users/<int:user_id>/",
-        admin_user_detail,
-        name="admin_user_detail",
-    ),
+    # path(
+    #     "admin/users/<int:user_id>/",
+    #     admin_user_detail,
+    #     name="admin_user_detail",
+    # ),
     path("search/", search_users, name="search_users"),
 ]
