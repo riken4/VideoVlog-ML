@@ -21,8 +21,11 @@ from .views import (
     forgot_password,
     verify_otp,
     set_password,
-    edit_comment
-
+    edit_comment,
+    admin_users,
+    admin_user_detail,
+    search_users,
+    following_feed_view,
 )
 
 urlpatterns = [
@@ -34,6 +37,7 @@ urlpatterns = [
     path("my/profile/", my_profile_view, name="myprofile"),
     path("follow_toggle/<str:username>/", follow_toggle, name="follow_toggle"),
     path("", home_view, name="home"),
+    path("following/", following_feed_view, name="following_feed"),
     path("create/post/", create_post, name="create_post"),
     path("edit/post/<int:post_id>/", edit_post, name="edit_post"),
     path("delete/post/<int:post_id>/", delete_post, name="delete_post"),
@@ -50,4 +54,12 @@ urlpatterns = [
     path("forgot_password", forgot_password, name="forgot_password"),
     path("verify_otp", verify_otp, name="verify_otp"),
     path("set_password", set_password, name="set_password"),
+    path("admin/users/", admin_users, name="admin_users"),
+
+    path(
+        "admin/users/<int:user_id>/",
+        admin_user_detail,
+        name="admin_user_detail",
+    ),
+    path("search/", search_users, name="search_users"),
 ]

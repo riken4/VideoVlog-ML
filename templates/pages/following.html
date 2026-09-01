@@ -1,0 +1,511 @@
+{% extends 'components/base.html' %}
+{% block title %}Following Feed — Video Vlog{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom scrollbar for comment section */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+    }
+
+    /* Tab underline transition */
+    .tab-btn {
+        border-bottom: 2px solid transparent;
+        transition: color .15s ease, border-color .15s ease;
+    }
+    .tab-btn.tab-active {
+        color: #ffffff;
+        border-color: #ffffff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="relative h-screen h-dvh overflow-hidden pt-6 font-sans" id="tiktokContainer">
+
+   
+
+    {% if posts %}
+        <!-- Prev/Next vertical navigation controls -->
+        <div class="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 flex-col gap-3 z-30">
+            <button id="tiktokPrevBtn" title="Previous"
+                    class="w-10 h-10 rounded-full bg-neutral-800/80 hover:bg-neutral-700 text-white flex items-center justify-center cursor-pointer transition disabled:opacity-20 disabled:cursor-default">
+                <i class="fas fa-chevron-up text-lg"></i>
+            </button>
+            <button id="tiktokNextBtn" title="Next"
+                    class="w-10 h-10 rounded-full bg-neutral-800/80 hover:bg-neutral-700 text-white flex items-center justify-center cursor-pointer transition disabled:opacity-20 disabled:cursor-default">
+                <i class="fas fa-chevron-down text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Main Vertical Feed Track -->
+        <div class="transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" id="tiktokTrack">
+
+            {% for post in posts %}
+            <div class="h-screen h-dvh w-full box-border flex items-center justify-center p-0 sm:p-4 overflow-y-auto tiktok-slide">
+                <div class="relative flex flex-col lg:flex-row items-center justify-center w-full max-w-[900px] h-full sm:h-[88vh] gap-0 lg:gap-4 mx-auto">
+
+                    <!-- Video Container -->
+                    <div class="post-card relative w-full lg:w-[420px] h-full bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-2xl" data-post-id="{{ post.id }}">
+
+                        {% if post.video %}
+                            <video src="{{ post.video.url }}"
+                                    id="video-{{ post.id }}"
+                                    data-post-id="{{ post.id }}"
+                                    class="media-el w-full h-full object-cover bg-black"
+                                    loop playsinline muted>
+                            </video>
+
+                            <!-- Click-to-toggle overlay -->
+                            <button type="button" onclick="togglePlay('{{ post.id }}')"
+                                    class="absolute inset-0 z-10 flex items-center justify-center focus:outline-none">
+                                <span id="play-icon-{{ post.id }}" class="hidden items-center justify-center w-16 h-16 rounded-full bg-black/45 backdrop-blur-sm text-white text-2xl transition">
+                                    <i class="fas fa-play ml-1"></i>
+                                </span>
+                            </button>
+
+                            <!-- Mute toggle -->
+                            <button type="button" onclick="event.stopPropagation(); toggleMute('{{ post.id }}')"
+                                    class="absolute bottom-3 right-3 z-20 w-8 h-8 mb-4 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs flex items-center justify-center">
+                                <i id="mute-icon-{{ post.id }}" class="fas fa-volume-mute"></i>
+                            </button>
+
+                            <!-- Progress bar + video length -->
+                            <div class="absolute left-3 right-3 bottom-3 z-20 flex items-center gap-2 pointer-events-none">
+                                <div class="flex-1 h-1 rounded-full bg-white/25 overflow-hidden cursor-pointer pointer-events-auto" onclick="event.stopPropagation(); seekVideo('{{ post.id }}', event)" id="progress-track-{{ post.id }}">
+                                    <div id="progress-fill-{{ post.id }}" class="h-full bg-[#fe2c55] w-0"></div>
+                                </div>
+                                <span class="text-[10px] font-medium text-white drop-shadow tabular-nums shrink-0">
+                                    <span id="current-time-{{ post.id }}">0:00</span> / <span id="duration-{{ post.id }}">0:00</span>
+                                </span>
+                            </div>
+                        {% elif post.image %}
+                            <img src="{{ post.image.url }}" class="media-el w-full h-full object-cover bg-black" alt="Post content">
+                        {% else %}
+                            <div class="w-full h-full flex items-center justify-center bg-neutral-900 px-6 text-center text-neutral-400">
+                                {{ post.content }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Bottom Gradient Overlay -->
+                        <div class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none lg:hidden"></div>
+
+                        <!-- Bottom Left Metadata Info Overlay -->
+                        <div class="absolute bottom-4 left-4 right-16 text-white z-10 space-y-2 pointer-events-auto lg:hidden">
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'profile' post.author.username %}" class="font-bold text-base hover:underline drop-shadow">
+                                    @{{ post.author.username }}
+                                </a>
+                                <span class="text-xs text-neutral-300">• {{ post.created_at|timesince }} ago</span>
+                            </div>
+
+                            {% if post.title %}
+                                <h3 class="font-semibold text-sm drop-shadow">{{ post.title }}</h3>
+                            {% endif %}
+
+                            <p class="text-xs sm:text-sm text-neutral-200 line-clamp-2 drop-shadow">
+                                {{ post.content }}
+                            </p>
+                        </div>
+
+                        <!-- TikTok Right Action Bar -->
+                        <div class="absolute right-3 bottom-6 flex flex-col items-center gap-4 z-20 lg:hidden">
+
+                            <!-- Author Avatar -->
+                            <div class="relative mb-2">
+                                <a href="{% url 'profile' post.author.username %}" class="block w-11 h-11 rounded-full border-2 border-white overflow-hidden shadow">
+                                    {% if post.author.profile_picture %}
+                                        <img src="{{ post.author.profile_picture.url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                        <div class="w-full h-full bg-neutral-700 flex items-center justify-center text-white font-bold">
+                                            {{ post.author.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                </a>
+                            </div>
+
+                            <!-- Like Button -->
+                            <div class="flex flex-col items-center">
+                                {% csrf_token %}
+                                <button type="button" id="like-btn-{{ post.id }}" onclick="likePost({{ post.id }}, this)"
+                                        class="like-btn w-11 h-11 rounded-full bg-neutral-900/40 backdrop-blur-md flex items-center justify-center text-xl transition active:scale-125 {% if post.id in user_likes %}text-[#fe2c55]{% else %}text-white{% endif %}">
+                                    <i class="fa{% if post.id in user_likes %}s{% else %}r{% endif %} fa-heart"></i>
+                                </button>
+                                <span id="likes-count-{{ post.id }}" class="text-xs font-semibold text-white mt-1 drop-shadow">
+                                    {{ post.total_likes }}
+                                </span>
+                            </div>
+
+                            <!-- Comment Button -->
+                            <div class="flex flex-col items-center">
+                                <button type="button" onclick="toggleComments('{{ post.id }}')"
+                                        class="w-11 h-11 rounded-full bg-neutral-900/40 backdrop-blur-md flex items-center justify-center text-xl text-white transition active:scale-125">
+                                    <i class="fas fa-comment-dots"></i>
+                                </button>
+                                <span id="comments-count-{{ post.id }}" class="text-xs font-semibold text-white mt-1 drop-shadow">
+                                    {{ post.total_comments }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Sidebar Comment / Details Panel -->
+                    <div class="comment-section hidden lg:flex flex-col w-full lg:w-[380px] h-[55vh] lg:h-full bg-neutral-900 border border-neutral-800 lg:rounded-2xl overflow-hidden z-20 shadow-2xl" id="comments-{{ post.id }}">
+
+                        <!-- Header: Author + Info -->
+                        <div class="hidden lg:block px-4 pt-4 pb-3 border-b border-neutral-800/80">
+                            <div class="flex items-center gap-2 mb-3">
+                                <a href="{% url 'profile' post.author.username %}" class="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-neutral-700">
+                                    {% if post.author.profile_picture %}
+                                        <img src="{{ post.author.profile_picture.url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                        <div class="w-full h-full bg-neutral-700 flex items-center justify-center text-white font-bold text-sm">
+                                            {{ post.author.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                </a>
+                                <div class="flex items-center gap-1.5 text-sm min-w-0">
+                                    <a href="{% url 'profile' post.author.username %}" class="font-bold text-white hover:underline truncate">
+                                        {{ post.author.username }}
+                                    </a>
+                                    <span class="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full font-medium">Following</span>
+                                </div>
+                            </div>
+
+                            {% if post.title %}
+                                <h3 class="font-semibold text-sm text-white mb-1">{{ post.title }}</h3>
+                            {% endif %}
+                            <p class="text-sm text-neutral-300 leading-snug line-clamp-3">
+                                {{ post.content }}
+                            </p>
+                        </div>
+
+                        <!-- Like / Comment Row -->
+                        <div class="hidden lg:flex items-center gap-6 px-4 py-3 border-b border-neutral-800/80">
+                            <button type="button" id="like-btn-desktop-{{ post.id }}" onclick="likePost({{ post.id }}, this)"
+                                    class="like-btn-desktop flex flex-col items-center gap-1 transition active:scale-110 {% if post.id in user_likes %}text-[#fe2c55]{% else %}text-neutral-300{% endif %}">
+                                <i class="fa{% if post.id in user_likes %}s{% else %}r{% endif %} fa-heart text-xl"></i>
+                                <span id="likes-count-desktop-{{ post.id }}" class="text-xs font-semibold text-neutral-300">{{ post.total_likes }}</span>
+                            </button>
+                            <button type="button" class="flex flex-col items-center gap-1 text-neutral-300">
+                                <i class="fas fa-comment text-xl"></i>
+                                <span id="comments-count-desktop-{{ post.id }}" class="text-xs font-semibold text-neutral-300">{{ post.total_comments }}</span>
+                            </button>
+                        </div>
+
+                        <!-- Desktop-only tabs -->
+                        <div class="hidden lg:flex items-center gap-6 px-4 border-b border-neutral-800/80">
+                            <button type="button" class="py-3 text-sm font-semibold text-white">
+                                Comments ({{ post.total_comments }})
+                            </button>
+                        </div>
+
+                        <!-- Mobile-only drawer header -->
+                        <div class="flex lg:hidden justify-between items-center px-4 pt-4 pb-3 border-b border-neutral-800">
+                            <h4 class="font-bold text-sm text-white">Comments ({{ post.total_comments }})</h4>
+                            <button onclick="toggleComments('{{ post.id }}')" class="text-neutral-400 hover:text-white">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <!-- Scrollable list of comments -->
+                        <div id="comment-list-{{ post.id }}" class="block flex-1 overflow-y-auto custom-scrollbar px-4 py-3 space-y-3">
+                            {% for comment in post.comments.all %}
+                            <div class="bg-neutral-800/60 rounded-xl p-3 text-xs">
+                                <span class="font-bold text-neutral-300">@{{ comment.author.username }}</span>
+                                <div class="text-neutral-100 mt-1">{{ comment.content }}</div>
+                                <div class="text-[10px] text-neutral-500 mt-1">{{ comment.created_at|timesince }} ago</div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-6 text-neutral-500 text-xs">No comments yet.</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Comment input -->
+                        <div class="p-3 border-t border-neutral-800 bg-neutral-900">
+                            <form onsubmit="return submitComment(event, '{{ post.id }}')" class="flex gap-2">
+                                {% csrf_token %}
+                                <input type="text" id="comment-input-{{ post.id }}" placeholder="Add comment..."
+                                        class="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#fe2c55]">
+                                <button type="submit" class="text-[#fe2c55] font-semibold text-xs px-2 hover:opacity-80">Post</button>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <!-- Empty State: No Following Posts -->
+        <div class="h-full flex items-center justify-center p-4">
+            <div class="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 max-w-lg w-full text-center text-white shadow-2xl">
+                <div class="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+
+                <h2 class="text-xl font-bold mb-2">Your Following Feed is Empty</h2>
+                <p class="text-neutral-400 text-sm mb-6">
+                    Follow your favorite creators to see their latest videos ranked by the MLR recommendation algorithm right here!
+                </p>
+
+                <!-- Suggested Creators -->
+                {% if suggested_creators %}
+                <div class="text-left mb-6">
+                    <h3 class="text-xs uppercase tracking-wider font-semibold text-neutral-400 mb-3">
+                        Suggested Creators For You
+                    </h3>
+                    <div class="space-y-2.5 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                        {% for creator in suggested_creators %}
+                        <div class="flex items-center justify-between p-3 bg-neutral-800/70 rounded-xl">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <a href="{% url 'profile' creator.username %}" class="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-neutral-700">
+                                    {% if creator.profile_picture %}
+                                        <img src="{{ creator.profile_picture.url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                        <div class="w-full h-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                                            {{ creator.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                </a>
+                                <div class="min-w-0">
+                                    <a href="{% url 'profile' creator.username %}" class="font-bold text-sm text-white hover:underline block truncate">
+                                        @{{ creator.username }}
+                                    </a>
+                                    <span class="text-xs text-neutral-400">{{ creator.get_followers_count }} followers</span>
+                                </div>
+                            </div>
+
+                            <form method="POST" action="{% url 'follow_toggle' creator.username %}">
+                                {% csrf_token %}
+                                <button type="submit" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition active:scale-95">
+                                    Follow
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="flex gap-3 justify-center">
+                    <a href="{% url 'home' %}" class="px-5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-semibold transition">
+                        Explore For You Feed
+                    </a>
+                    <a href="{% url 'search_users' %}" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition">
+                        Find Creators
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Video Player Controls & TikTok Scrolling
+function formatTime(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return "0:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function togglePlay(postId) {
+    const video = document.getElementById(`video-${postId}`);
+    if (!video) return;
+    if (video.paused) {
+        video.play().catch(() => {});
+    } else {
+        video.pause();
+    }
+}
+
+function toggleMute(postId) {
+    const video = document.getElementById(`video-${postId}`);
+    const icon = document.getElementById(`mute-icon-${postId}`);
+    if (!video) return;
+    video.muted = !video.muted;
+    if (icon) {
+        icon.className = video.muted ? "fas fa-volume-mute" : "fas fa-volume-up";
+    }
+}
+
+function seekVideo(postId, event) {
+    const video = document.getElementById(`video-${postId}`);
+    const track = document.getElementById(`progress-track-${postId}`);
+    if (!video || !track || !isFinite(video.duration) || video.duration <= 0) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+    video.currentTime = ratio * video.duration;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const videos = document.querySelectorAll("video");
+
+    const pauseAllVideos = (exceptVideo = null) => {
+        videos.forEach(candidate => {
+            if (candidate !== exceptVideo && !candidate.paused) {
+                candidate.pause();
+            }
+        });
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target;
+            if (entry.intersectionRatio >= 0.75) {
+                pauseAllVideos(video);
+                if (video.paused) {
+                    video.play().catch(() => {});
+                }
+            } else if (!video.paused) {
+                video.pause();
+            }
+        });
+    }, { threshold: [0.5, 0.75] });
+
+    videos.forEach(video => {
+        observer.observe(video);
+        let interval = null;
+        const postId = video.dataset.postId;
+
+        const sendWatchUpdate = () => {
+            const curTime = Math.floor(video.currentTime || 0);
+            if (curTime > 0) {
+                fetch("/watch/update/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({ post_id: postId, duration: curTime })
+                }).catch(() => {});
+            }
+        };
+
+        video.addEventListener("play", function () {
+            pauseAllVideos(video);
+            fetch("/watch/start/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ post_id: postId })
+            }).catch(() => {});
+
+            if (interval) clearInterval(interval);
+            interval = setInterval(sendWatchUpdate, 3000);
+        });
+
+        video.addEventListener("pause", function () {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            sendWatchUpdate();
+        });
+
+        video.addEventListener("ended", function () {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            sendWatchUpdate();
+            fetch("/watch/complete/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ post_id: postId })
+            }).catch(() => {});
+        });
+
+        const durationEl = document.getElementById(`duration-${postId}`);
+        const currentTimeEl = document.getElementById(`current-time-${postId}`);
+        const fillEl = document.getElementById(`progress-fill-${postId}`);
+
+        video.addEventListener("loadedmetadata", function () {
+            if (durationEl) durationEl.textContent = formatTime(video.duration);
+        });
+
+        video.addEventListener("timeupdate", function () {
+            if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
+            if (fillEl && isFinite(video.duration) && video.duration > 0) {
+                fillEl.style.width = `${(video.currentTime / video.duration) * 100}%`;
+            }
+        });
+    });
+
+    // Paging script
+    const container = document.getElementById("tiktokContainer");
+    const track = document.getElementById("tiktokTrack");
+    const slides = Array.from(document.querySelectorAll(".tiktok-slide"));
+    const prevBtn = document.getElementById("tiktokPrevBtn");
+    const nextBtn = document.getElementById("tiktokNextBtn");
+
+    if (!container || !track || slides.length === 0) return;
+
+    let currentIndex = 0;
+    let isAnimating = false;
+
+    function updateButtons() {
+        if (prevBtn) prevBtn.disabled = currentIndex === 0;
+        if (nextBtn) nextBtn.disabled = currentIndex === slides.length - 1;
+    }
+
+    function goToSlide(newIndex) {
+        if (newIndex < 0 || newIndex >= slides.length) return;
+        if (isAnimating) return;
+        isAnimating = true;
+        currentIndex = newIndex;
+        track.style.transform = `translateY(-${currentIndex * 100}vh)`;
+        updateButtons();
+        setTimeout(() => { isAnimating = false; }, 460);
+    }
+
+    updateButtons();
+
+    if (nextBtn) nextBtn.addEventListener("click", () => goToSlide(currentIndex + 1));
+    if (prevBtn) prevBtn.addEventListener("click", () => goToSlide(currentIndex - 1));
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowDown" || e.key === "PageDown") {
+            e.preventDefault();
+            goToSlide(currentIndex + 1);
+        } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+            e.preventDefault();
+            goToSlide(currentIndex - 1);
+        }
+    });
+
+    let wheelLocked = false;
+    container.addEventListener("wheel", function (e) {
+        const slide = e.target.closest(".tiktok-slide");
+        if (!slide) return;
+        const atTop = slide.scrollTop <= 0;
+        const atBottom = Math.ceil(slide.scrollTop + slide.clientHeight) >= slide.scrollHeight;
+        if (e.deltaY > 0 && !atBottom) return;
+        if (e.deltaY < 0 && !atTop) return;
+        e.preventDefault();
+        if (wheelLocked) return;
+        wheelLocked = true;
+        if (e.deltaY > 0) goToSlide(currentIndex + 1);
+        else if (e.deltaY < 0) goToSlide(currentIndex - 1);
+        setTimeout(() => { wheelLocked = false; }, 500);
+    }, { passive: false });
+});
+</script>
+{% endblock %}

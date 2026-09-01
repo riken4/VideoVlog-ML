@@ -2,7 +2,7 @@
 from django.urls import path
 from accounts.views import home_view
 from .views import watch_start
-from .views import get_recommendations, recommend_posts, watch_update, watch_complete
+from .views import get_recommendations, recommend_posts, watch_update, watch_complete, mlr_recommendations
 
 urlpatterns = [
     path("", home_view, name="home"),
@@ -26,5 +26,10 @@ urlpatterns = [
     "watch/complete/",
     watch_complete,
     name="watch_complete",
+),
+path(
+    "mlr-recommendations/",
+    mlr_recommendations,
+    name="mlr_recommendations"
 ),
 ]

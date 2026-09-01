@@ -1,60 +1,67 @@
+# ============================================================
+# recommender.py
+# Content-Based Video Recommendation using Title + Description TF-IDF
+# ============================================================
+
 import os
 import pickle
-
+import numpy as np
+from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
 from django.db.models import Case, When
 
 from post.models import Post
+from post.mlr_features import clean_post_text, fit_or_load_tfidf
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-cosine_sim = pickle.load(
-    open(os.path.join(BASE_DIR, "recommendation_model.pkl"), "rb")
-)
-
-video_data = pickle.load(
-    open(os.path.join(BASE_DIR, "video_data.pkl"), "rb")
-)
-
-indices = pickle.load(
-    open(os.path.join(BASE_DIR, "indices.pkl"), "rb")
-)
+MODEL_DIR = os.path.join(BASE_DIR, "ml_models")
+TFIDF_PATH = os.path.join(MODEL_DIR, "mlr_tfidf_vectorizer.pkl")
 
 
-def recommend(post_id, top_n=10):
-
-    if post_id not in indices:
+def recommend(query_or_post_id, top_n=10):
+    """
+    Recommend posts similar to a given post ID or text query based on Title + Description TF-IDF.
+    """
+    posts = list(Post.objects.select_related("author").all())
+    if not posts:
         return []
 
-    idx = indices[post_id]
+    vectorizer = fit_or_load_tfidf(posts)
+    post_texts = [clean_post_text(p) for p in posts]
+    post_tfidf = vectorizer.transform(post_texts)
 
-    similarity_scores = list(enumerate(cosine_sim[idx]))
+    target_idx = None
+    target_vector = None
 
-    similarity_scores.sort(
-        key=lambda x: x[1],
-        reverse=True
-    )
+    if isinstance(query_or_post_id, int) or (isinstance(query_or_post_id, str) and query_or_post_id.isdigit()):
+        post_id = int(query_or_post_id)
+        for i, p in enumerate(posts):
+            if p.id == post_id:
+                target_idx = i
+                break
+        if target_idx is not None:
+            target_vector = post_tfidf[target_idx]
+    else:
+        # String query search
+        query_text = str(query_or_post_id).lower().strip()
+        if query_text:
+            target_vector = vectorizer.transform([query_text])
 
-    similarity_scores = similarity_scores[1:top_n + 1]
+    if target_vector is None:
+        return posts[:top_n]
 
-    recommended_ids = [
-        int(video_data.iloc[i[0]]["id"])
-        for i in similarity_scores
-    ]
+    # Compute similarity against all posts
+    sim_scores = cosine_similarity(target_vector, post_tfidf).flatten()
 
-    preserved_order = Case(
-        *[
-            When(id=pk, then=position)
-            for position, pk in enumerate(recommended_ids)
-        ]
-    )
+    # Sort indices
+    sorted_indices = np.argsort(sim_scores)[::-1]
 
-    posts = Post.objects.filter(
-        id__in=recommended_ids
-    ).select_related(
-        "author"
-    ).order_by(
-        preserved_order
-    )
+    recommended_posts = []
+    for idx in sorted_indices:
+        # Skip the exact same post if queried by ID
+        if target_idx is not None and idx == target_idx:
+            continue
+        recommended_posts.append(posts[idx])
+        if len(recommended_posts) >= top_n:
+            break
 
-    return posts
-
+    return recommended_posts

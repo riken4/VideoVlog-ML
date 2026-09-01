@@ -29,6 +29,7 @@
 {% block content %}
 <div class="relative h-screen h-dvh overflow-hidden pt-6 font-sans" id="tiktokContainer">
 
+
     <!-- Prev/Next vertical navigation controls -->
     <div class="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 flex-col gap-3 z-30">
         <button id="tiktokPrevBtn" title="Previous"
@@ -663,6 +664,23 @@ document.addEventListener("DOMContentLoaded", function () {
         let interval = null;
         const postId = video.dataset.postId;
 
+        const sendWatchUpdate = () => {
+            const curTime = Math.floor(video.currentTime || 0);
+            if (curTime > 0) {
+                fetch("/watch/update/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({
+                        post_id: postId,
+                        duration: curTime
+                    })
+                }).catch(() => {});
+            }
+        };
+
         video.addEventListener("play", function () {
             pauseAllVideos(video);
             fetch("/watch/start/", {
@@ -672,23 +690,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     "X-CSRFToken": "{{ csrf_token }}"
                 },
                 body: JSON.stringify({ post_id: postId })
-            });
+            }).catch(() => {});
 
             if (interval) clearInterval(interval);
-
-            interval = setInterval(function () {
-                fetch("/watch/update/", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": "{{ csrf_token }}"
-                    },
-                    body: JSON.stringify({
-                        post_id: postId,
-                        duration: Math.floor(video.currentTime)
-                    })
-                });
-            }, 5000);
+            interval = setInterval(sendWatchUpdate, 3000);
         });
 
         video.addEventListener("pause", function () {
@@ -696,9 +701,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 clearInterval(interval);
                 interval = null;
             }
+            sendWatchUpdate();
         });
 
         video.addEventListener("ended", function () {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            sendWatchUpdate();
             fetch("/watch/complete/", {
                 method: "POST",
                 headers: {
@@ -706,7 +717,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     "X-CSRFToken": "{{ csrf_token }}"
                 },
                 body: JSON.stringify({ post_id: postId })
-            });
+            }).catch(() => {});
         });
     });
 

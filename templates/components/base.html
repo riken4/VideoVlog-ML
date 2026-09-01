@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% block extra_css %}{% endblock %}
 </head>
+
 <body class="bg-[#f0f2f5] font-sans text-[#050505]">
     {% if user.is_authenticated %}
     <nav class="sticky top-0 z-40 bg-white shadow-sm px-2 sm:px-4 py-2">
@@ -17,39 +19,84 @@
             </a>
 
             <!-- Mobile toggle -->
-            <button class="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg text-[#65676b] hover:bg-[#f0f2f5]"
-                    id="navbarToggler" onclick="document.getElementById('navbarNav').classList.toggle('hidden')">
+            <button
+                class="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg text-[#65676b] hover:bg-[#f0f2f5]"
+                id="navbarToggler" onclick="document.getElementById('navbarNav').classList.toggle('hidden')">
                 <i class="fas fa-bars"></i>
             </button>
 
             <div class="hidden lg:flex items-center" id="navbarNav">
                 <ul class="flex items-center gap-1">
                     <li>
-                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="{% url 'home' %}">
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="{% url 'home' %}">
+                            For You
+                        </a>
+                    </li>
+                    <li>
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="{% url 'following_feed' %}">
+                            Following
+                        </a>
+                    </li>
+                    <li>
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="{% url 'search_users' %}">
+                            <i class="fa fa-search"></i> Search
+                        </a>
+                    </li>
+                    <li>
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="{% url 'home' %}">
                             <i class="fas fa-home"></i> Home
                         </a>
                     </li>
-                    <li class="relative">
-                        <a class="relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="#" id="notificationBtn">
-                            <i class="fas fa-bell"></i>
-                            <span class="hidden absolute -top-1 -right-1 bg-red-500 text-white rounded-full px-1.5 py-0.5 text-xs font-bold" id="notificationBadge">0</span>
+                    <li>
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="{% url 'following_feed' %}">
+                            <i class="fas fa-user-friends"></i> Following
                         </a>
-                        <div class="hidden absolute right-0 top-full w-[350px] max-h-[400px] overflow-y-auto bg-white rounded-lg shadow-lg mt-2 z-50 border border-[#e4e6eb]" id="notificationDropdown">
-                            <div class="p-3 border-b border-[#e4e6eb] flex justify-between items-center bg-white sticky top-0 z-10">
-                                <h6 class="mb-0 font-semibold">Notifications</h6>
-                                <button class="text-sm text-[#1877f2] hover:underline cursor-pointer" onclick="markAllRead()">Mark all read</button>
+                    </li>
+                    <li class="relative">
+                        <a class="relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="#" id="notificationBtn">
+                            <i class="fas fa-bell"></i>
+                            <span
+                                class="hidden absolute -top-1 -right-1 bg-red-500 text-white rounded-full px-1.5 py-0.5 text-xs font-bold"
+                                id="notificationBadge">0</span>
+                        </a>
+                        <div class="hidden absolute right-0 top-full w-[350px] max-h-[400px] overflow-y-auto bg-white rounded-lg shadow-lg mt-2 z-50 border border-[#e4e6eb]"
+                            id="notificationDropdown">
+
+                            <div
+                                class="p-3 border-b border-[#e4e6eb] flex justify-between items-center bg-white sticky top-0 z-10">
+
+                                <h6 class="mb-0 font-semibold">
+                                    Notifications
+                                </h6>
+
+                                <button class="text-sm text-[#1877f2] hover:underline cursor-pointer"
+                                    onclick="markAllRead()">
+                                    Mark all read
+                                </button>
+
                             </div>
-                            <div id="notificationList" class="divide-y divide-gray-100"></div>
+
+                            <div id="notificationList" class="divide-y divide-gray-100">
+                            </div>
+
                         </div>
                     </li>
                     <li>
-                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="{% url 'profile' user.username %}">
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="{% url 'myprofile' %}">
                             <i class="fas fa-user"></i> Profile
                         </a>
                     </li>
-                    
+
                     <li>
-                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition" href="{% url 'logout' %}">
+                        <a class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-[#65676b] hover:bg-[#f0f2f5] transition"
+                            href="{% url 'logout' %}">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
                     </li>
@@ -61,76 +108,122 @@
 
     <div class="container mx-auto mt-4 px-2 sm:px-4">
         {% if messages %}
-            {% for message in messages %}
-            <div class="flex items-center justify-between gap-3 rounded-lg px-4 py-3 mb-3
+        {% for message in messages %}
+        <div class="flex items-center justify-between gap-3 rounded-lg px-4 py-3 mb-3
                         {% if message.tags == 'error' or message.tags == 'danger' %}bg-red-50 text-red-800
                         {% elif message.tags == 'success' %}bg-green-50 text-green-800
                         {% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-800
                         {% else %}bg-blue-50 text-blue-800{% endif %}" role="alert">
-                <span>{{ message }}</span>
-                <button type="button" class="text-current opacity-60 hover:opacity-100" onclick="this.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            {% endfor %}
+            <span>{{ message }}</span>
+            <button type="button" class="text-current opacity-60 hover:opacity-100"
+                onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        {% endfor %}
         {% endif %}
 
-         
+
         {% block content %}{% endblock %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         {% if user.is_authenticated %}
-        function loadNotifications() {
-            fetch('/accounts/api/all_notifications')
-                .then(res => res.json())
-                .then(data => {
-                    const badge = document.getElementById('notificationBadge');
-                    const list = document.getElementById('notificationList');
-                    
-                    if (data.unread_count > 0) {
-                        badge.textContent = data.unread_count;
-                        badge.classList.remove('hidden');
-                    } else {
-                        badge.classList.add('hidden');
-                    }
-                    
-                    if (!data.notifications || data.notifications.length === 0) {
-                        list.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">No notifications</div>';
-                        return;
-                    }
-                    
-                    // Sort notifications to ensure newest ones appear at the top
-                    const sortedNotifications = [...data.notifications].sort((a, b) => {
-                        return new Date(b.created_at) - new Date(a.created_at);
-                    });
-
-                    list.innerHTML = sortedNotifications.map(n => {
-                        let text = '';
-                        if (n.notification_type === 'like') text = 'liked your post';
-                        else if (n.notification_type === 'comment') text = 'commented on your post';
-                        else if (n.notification_type === 'follow') text = 'started following you';
-                        
-                        const bgClass = n.is_read ? 'bg-white' : 'bg-blue-50/60';
-                        const profileUrl = `/accounts/profile/${n.sender_username}/`;
-
-                        return `
-                            <div class="p-3 text-sm hover:bg-gray-100 transition cursor-pointer ${bgClass}" onclick="markRead(${n.id})">
-                                <div>
-                                    <a href="${profileUrl}" class="font-semibold text-gray-900 hover:underline hover:text-[#1877f2]" onclick="event.stopPropagation();">
-                                        ${n.sender_username}
-                                    </a> 
-                                    <span class="text-gray-700">${text}</span>
-                                </div>
-                                <div class="text-xs text-gray-500 mt-1">${new Date(n.created_at).toLocaleDateString()}</div>
-                            </div>
-                        `;
-                    }).join('');
-                })
-                .catch(err => console.error('Error fetching notifications:', err));
+        function escapeHtml(value) {
+            const element = document.createElement('div');
+            element.textContent = value || '';
+            return element.innerHTML;
         }
-        
+
+        function loadNotifications() {
+            fetch('/accounts/api/all_notifications', { credentials: 'same-origin' })
+                .then(response => {
+                    if (!response.ok) throw new Error('Unable to load notifications');
+                    return response.json();
+                })
+                .then(data => {
+                    const list = document.getElementById('notificationList');
+                    const badge = document.getElementById('notificationBadge');
+                    if (!list || !badge) return;
+
+                    const notifications = data.notifications || [];
+                    list.innerHTML = notifications.length
+                        ? notifications.map(notification => {
+                            const message = {
+                                like: 'liked your post.',
+                                comment: 'commented on your post.',
+                                follow: 'started following you.'
+                            }[notification.notification_type] || 'sent you a notification.';
+                            return `
+                            <a href="/accounts/profile/${encodeURIComponent(notification.sender_username)}/"
+                                onclick="markRead(${notification.id})"
+                                class="block w-full p-3 text-left hover:bg-gray-50 ${notification.is_read ? 'opacity-60' : ''}">
+                                <div class="text-sm"><strong>${escapeHtml(notification.sender_username)}</strong>
+                                    ${message}</div>
+                                <div class="mt-1 text-xs text-gray-500">${new Date(notification.created_at).toLocaleString()}</div>
+                            </a>`;
+                        }).join('')
+                        : '<div class="p-4 text-center text-sm text-gray-500">No notifications yet.</div>';
+
+                    const unreadCount = data.unread_count || 0;
+                    badge.textContent = unreadCount;
+                    badge.classList.toggle('hidden', unreadCount === 0);
+                })
+                .catch(error => console.error('Notification loading failed:', error));
+        }
+
+        function connectNotificationWebSocket() {
+
+            const protocol =
+                window.location.protocol === "https:" ? "wss" : "ws";
+
+            const socket = new WebSocket(
+                `${protocol}://${window.location.host}/ws/notifications/`
+            );
+
+            socket.onopen = function () {
+                console.log("Notification WebSocket connected");
+            };
+
+            socket.onmessage = function (event) {
+
+                const data = JSON.parse(event.data);
+
+                if (data.type === "notification") {
+
+                    // Get latest notifications
+                    loadNotifications();
+
+                }
+            };
+
+            socket.onclose = function () {
+
+                console.log(
+                    "Notification WebSocket disconnected. Reconnecting..."
+                );
+
+                setTimeout(connectNotificationWebSocket, 3000);
+            };
+
+            socket.onerror = function (error) {
+                console.error(
+                    "Notification WebSocket error:",
+                    error
+                );
+            };
+        }
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            loadNotifications();
+
+            connectNotificationWebSocket();
+
+        });
+
         function markRead(id) {
             fetch(`/accounts/api/mark_notificationread/${id}/`, {
                 method: 'POST',
@@ -139,7 +232,7 @@
                 }
             }).then(() => loadNotifications());
         }
-        
+
         function markAllRead() {
             fetch('/accounts/api/markall_notificationread/', {
                 method: 'POST',
@@ -148,19 +241,19 @@
                 }
             }).then(() => loadNotifications());
         }
-        
+
         function getCookie(name) {
             let value = `; ${document.cookie}`;
             let parts = value.split(`; ${name}=`);
             if (parts.length === 2) return parts.pop().split(';').shift();
         }
-        
+
         document.getElementById('notificationBtn').addEventListener('click', (e) => {
             e.preventDefault();
             const dropdown = document.getElementById('notificationDropdown');
             dropdown.classList.toggle('hidden');
         });
-        
+
         document.addEventListener('click', (e) => {
             const dropdown = document.getElementById('notificationDropdown');
             const btn = document.getElementById('notificationBtn');
@@ -168,11 +261,10 @@
                 dropdown.classList.add('hidden');
             }
         });
-        
-        loadNotifications();
+
         setInterval(loadNotifications, 30000);
         {% endif %}
-        
+
         // Toggle comment sections
         function toggleComments(postId) {
             const section = document.getElementById('comments-' + postId);
@@ -180,7 +272,7 @@
                 section.style.display = section.style.display === 'none' ? 'block' : 'none';
             }
         }
-    
+
         function editComment(id) {
 
             document.getElementById("comment-text-" + id).classList.add("hidden");
@@ -205,169 +297,173 @@
                 },
                 body: new FormData(form)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.message || "Error editing comment.");
-                    return;
-                }
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || "Error editing comment.");
+                        return;
+                    }
 
-                const commentText = document.getElementById("comment-text-" + commentId);
-                if (commentText) {
-                    commentText.textContent = data.content;
-                }
-                cancelEdit(commentId);
-            })
-            .catch(error => {
-                console.error("Error editing comment:", error);
-                alert("Error editing comment. Please try again.");
-            });
+                    const commentText = document.getElementById("comment-text-" + commentId);
+                    if (commentText) {
+                        commentText.textContent = data.content;
+                    }
+                    cancelEdit(commentId);
+                })
+                .catch(error => {
+                    console.error("Error editing comment:", error);
+                    alert("Error editing comment. Please try again.");
+                });
 
             return false;
         }
-// ==========================================
-// REALTIME WEBSOCKET
-// ==========================================
+        // ==========================================
+        // REALTIME WEBSOCKET
+        // ==========================================
 
-document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", function () {
 
-    const sockets = {};
-    
-    // Get current user ID from Django template
-    const currentUserId = parseInt('{{ user.id }}') || null;
-    
-    console.log("Current User ID from template:", currentUserId);
-    console.log("User object:", '{{ user }}');
+            const sockets = {};
 
-    const posts = document.querySelectorAll("[data-post-id]");
+            // Get current user ID from Django template
+            const currentUserId = parseInt('{{ user.id }}') || null;
 
-    posts.forEach(post => {
+            console.log("Current User ID from template:", currentUserId);
+            console.log("User object:", '{{ user }}');
 
-        const postId = post.dataset.postId;
+            const posts = document.querySelectorAll("[data-post-id]");
 
-        const protocol =
-            window.location.protocol === "https:"
-            ? "wss://"
-            : "ws://";
+            posts.forEach(post => {
 
-        const socket = new WebSocket(
-            protocol +
-            window.location.host +
-            "/ws/post/" +
-            postId +
-            "/"
-        );
+                const postId = String(post.dataset.postId || "").trim();
 
-        sockets[postId] = socket;
+                if (!postId || postId === "undefined" || postId === "null") {
+                    return;
+                }
 
-        socket.onopen = function () {
+                const protocol =
+                    window.location.protocol === "https:"
+                        ? "wss://"
+                        : "ws://";
 
-            console.log(
-                "WebSocket connected:",
-                postId
-            );
+                const socket = new WebSocket(
+                    protocol +
+                    window.location.host +
+                    "/ws/post/" +
+                    postId +
+                    "/"
+                );
 
-        };
+                sockets[postId] = socket;
 
+                socket.onopen = function () {
 
-        socket.onmessage = function (event) {
-
-            const data = JSON.parse(event.data);
-
-            console.log("WebSocket data received:", data);
-            console.log("Current User ID in handler:", currentUserId);
-            console.log("Comment author ID:", data.author_id);
-            console.log("Is author?", currentUserId && data.author_id === currentUserId);
-
-            // ============================
-            // LIKE UPDATE
-            // ============================
-
-            if (data.type === "like_update") {
-
-                const likeCount =
-                    document.getElementById(
-                        `likes-count-${postId}`
+                    console.log(
+                        "WebSocket connected:",
+                        postId
                     );
 
-                if (likeCount) {
+                };
 
-                    likeCount.innerHTML =
-                        `${data.likes} likes`;
 
-                }
+                socket.onmessage = function (event) {
 
-            }
+                    const data = JSON.parse(event.data);
 
-            // ============================
-            // COMMENT EDIT UPDATE
-            // ============================
+                    console.log("WebSocket data received:", data);
+                    console.log("Current User ID in handler:", currentUserId);
+                    console.log("Comment author ID:", data.author_id);
+                    console.log("Is author?", currentUserId && data.author_id === currentUserId);
 
-            if (data.type === "comment_edited") {
-                const commentText = document.getElementById(
-                    `comment-text-${data.comment_id}`
-                );
+                    // ============================
+                    // LIKE UPDATE
+                    // ============================
 
-                if (commentText) {
-                    commentText.textContent = data.comment;
-                }
+                    if (data.type === "like_update") {
 
-                const editForm = document.getElementById(
-                    `edit-form-${data.comment_id}`
-                );
+                        const likeCount =
+                            document.getElementById(
+                                `likes-count-${postId}`
+                            );
 
-                if (editForm) {
-                    const textarea = editForm.querySelector("textarea[name='content']");
-                    if (textarea) {
-                        textarea.value = data.comment;
+                        if (likeCount) {
+
+                            likeCount.innerHTML =
+                                `${data.likes} likes`;
+
+                        }
+
                     }
-                    editForm.classList.add("hidden");
-                }
 
-                if (commentText) {
-                    commentText.classList.remove("hidden");
-                }
-                return;
-            }
+                    // ============================
+                    // COMMENT EDIT UPDATE
+                    // ============================
+
+                    if (data.type === "comment_edited") {
+                        const commentText = document.getElementById(
+                            `comment-text-${data.comment_id}`
+                        );
+
+                        if (commentText) {
+                            commentText.textContent = data.comment;
+                        }
+
+                        const editForm = document.getElementById(
+                            `edit-form-${data.comment_id}`
+                        );
+
+                        if (editForm) {
+                            const textarea = editForm.querySelector("textarea[name='content']");
+                            if (textarea) {
+                                textarea.value = data.comment;
+                            }
+                            editForm.classList.add("hidden");
+                        }
+
+                        if (commentText) {
+                            commentText.classList.remove("hidden");
+                        }
+                        return;
+                    }
 
 
-            // ============================
-            // COMMENT UPDATE
-            // ============================
+                    // ============================
+                    // COMMENT UPDATE
+                    // ============================
 
-            if (data.type === "comment_update") {
+                    if (data.type === "comment_update") {
 
-                const commentList =
-                    document.getElementById(
-                        `comment-list-${postId}`
-                    );
+                        const commentList =
+                            document.getElementById(
+                                `comment-list-${postId}`
+                            );
 
-                if (!commentList)
-                    return;
+                        if (!commentList)
+                            return;
 
-                // Check if comment already exists (prevent duplicates)
-                const existingComment =
-                    document.getElementById(
-                        `comment-${data.comment_id}`
-                    );
+                        // Check if comment already exists (prevent duplicates)
+                        const existingComment =
+                            document.getElementById(
+                                `comment-${data.comment_id}`
+                            );
 
-                if (existingComment)
-                    return;
+                        if (existingComment)
+                            return;
 
-                // Check if current user is the comment author
-                const isAuthor = currentUserId && data.author_id && (parseInt(data.author_id) === currentUserId);
-                
-                console.log(`Building comment ${data.comment_id}:`, {
-                    isAuthor: isAuthor,
-                    currentUserId: currentUserId,
-                    authorId: data.author_id,
-                    authorIdParsed: parseInt(data.author_id)
-                });
+                        // Check if current user is the comment author
+                        const isAuthor = currentUserId && data.author_id && (parseInt(data.author_id) === currentUserId);
 
-                const csrfToken = getCookie('csrftoken');
+                        console.log(`Building comment ${data.comment_id}:`, {
+                            isAuthor: isAuthor,
+                            currentUserId: currentUserId,
+                            authorId: data.author_id,
+                            authorIdParsed: parseInt(data.author_id)
+                        });
 
-                // Build the comment HTML
-                let commentHTML = `
+                        const csrfToken = getCookie('csrftoken');
+
+                        // Build the comment HTML
+                        let commentHTML = `
                     <div class="bg-neutral-800/60 rounded-xl p-3 text-xs" id="comment-${data.comment_id}">
                         <div class="flex justify-between items-start gap-2">
                             <div class="flex-1">
@@ -409,9 +505,9 @@ document.addEventListener("DOMContentLoaded", function () {
                             </div>
                 `;
 
-                // Add action buttons if user is the author
-                if (isAuthor) {
-                    commentHTML += `
+                        // Add action buttons if user is the author
+                        if (isAuthor) {
+                            commentHTML += `
                             <div class="flex gap-2 text-neutral-400 shrink-0">
                                 <button type="button" onclick="editComment(${data.comment_id})" class="hover:text-blue-400" title="Edit">
                                     <i class="fas fa-edit"></i>
@@ -421,326 +517,327 @@ document.addEventListener("DOMContentLoaded", function () {
                                 </button>
                             </div>
                     `;
-                }
+                        }
 
-                commentHTML += `
+                        commentHTML += `
                         </div>
                     </div>
                     `;
 
-                commentList.insertAdjacentHTML("beforeend", commentHTML);
-                console.log(`Comment ${data.comment_id} inserted with buttons:`, isAuthor);
+                        commentList.insertAdjacentHTML("beforeend", commentHTML);
+                        console.log(`Comment ${data.comment_id} inserted with buttons:`, isAuthor);
 
-            }
+                    }
 
-        };
-
-
-        socket.onerror = function (error) {
-
-            console.error(
-                "WebSocket Error:",
-                error
-            );
-
-        };
+                };
 
 
-        socket.onclose = function () {
+                socket.onerror = function (error) {
 
-            console.log(
-                "WebSocket Closed:",
-                postId
-            );
-
-        };
-
-    });
-
-});
-
-
-// ==========================================
-// CSRF
-// ==========================================
-
-function getCookie(name) {
-
-    let cookieValue = null;
-
-    if (document.cookie && document.cookie !== "") {
-
-        const cookies =
-            document.cookie.split(";");
-
-        for (let i = 0; i < cookies.length; i++) {
-
-            const cookie =
-                cookies[i].trim();
-
-            if (
-
-                cookie.substring(
-                    0,
-                    name.length + 1
-
-                ) ===
-
-                (name + "=")
-
-            ) {
-
-                cookieValue =
-                    decodeURIComponent(
-
-                        cookie.substring(
-                            name.length + 1
-                        )
-
+                    console.error(
+                        "WebSocket Error:",
+                        error
                     );
 
-                break;
+                };
+
+
+                socket.onclose = function () {
+
+                    console.log(
+                        "WebSocket Closed:",
+                        postId
+                    );
+
+                };
+
+            });
+
+        });
+
+
+        // ==========================================
+        // CSRF
+        // ==========================================
+
+        function getCookie(name) {
+
+            let cookieValue = null;
+
+            if (document.cookie && document.cookie !== "") {
+
+                const cookies =
+                    document.cookie.split(";");
+
+                for (let i = 0; i < cookies.length; i++) {
+
+                    const cookie =
+                        cookies[i].trim();
+
+                    if (
+
+                        cookie.substring(
+                            0,
+                            name.length + 1
+
+                        ) ===
+
+                        (name + "=")
+
+                    ) {
+
+                        cookieValue =
+                            decodeURIComponent(
+
+                                cookie.substring(
+                                    name.length + 1
+                                )
+
+                            );
+
+                        break;
+
+                    }
+
+                }
 
             }
 
-        }
-
-    }
-
-    return cookieValue;
-
-}
-
-
-
-// ==========================================
-// LIKE POST
-// ==========================================
-
-function likePost(postId, button) {
-
-    fetch(
-
-        `/accounts/like/post/${postId}/`,
-
-        {
-
-            method: "POST",
-
-            headers: {
-
-                "X-CSRFToken":
-                    getCookie("csrftoken"),
-
-                "Content-Type":
-                    "application/json"
-
-            }
+            return cookieValue;
 
         }
 
-    )
-
-    .then(response => response.json())
-
-    .then(data => {
-
-        if (!data.success)
-            return;
-
-        console.log("Like Updated");
-
-        const likeCount =
-            document.getElementById(
-                `likes-count-${postId}`
-            );
-
-        if (likeCount) {
-
-            likeCount.innerHTML =
-                `${data.likes} likes`;
-
-        }
-
-        const icon =
-            button.querySelector("i");
-
-        if (data.liked) {
-
-            button.classList.remove(
-                "text-[#65676b]"
-            );
-
-            button.classList.add(
-                "text-red-500"
-            );
-
-            icon.classList.remove(
-                "far"
-            );
-
-            icon.classList.add(
-                "fas"
-            );
-
-        }
-
-        else {
-
-            button.classList.remove(
-                "text-red-500"
-            );
-
-            button.classList.add(
-                "text-[#65676b]"
-            );
-
-            icon.classList.remove(
-                "fas"
-            );
-
-            icon.classList.add(
-                "far"
-            );
-
-        }
-
-    })
-
-    .catch(error => {
-
-        console.error(error);
-
-    });
-
-}
 
 
+        // ==========================================
+        // LIKE POST
+        // ==========================================
 
-// ==========================================
-// COMMENT POST
-// ==========================================
+        function likePost(postId, button) {
 
-function submitComment(event, postId) {
+            fetch(
 
-    event.preventDefault();
+                `/accounts/like/post/${postId}/`,
 
-    const input =
-        document.getElementById(
-            `comment-input-${postId}`
-        );
+                {
 
-    const formData =
-        new FormData();
+                    method: "POST",
 
-    formData.append(
-        "content",
-        input.value
-    );
+                    headers: {
 
-    fetch(
+                        "X-CSRFToken":
+                            getCookie("csrftoken"),
 
-        `/accounts/comment/post/${postId}/`,
+                        "Content-Type":
+                            "application/json"
 
-        {
+                    }
 
-            method: "POST",
+                }
 
-            headers: {
+            )
 
-                "X-CSRFToken":
-                    getCookie("csrftoken")
+                .then(response => response.json())
 
-            },
+                .then(data => {
 
-            body: formData
+                    if (!data.success)
+                        return;
+
+                    console.log("Like Updated");
+
+                    const likeCount =
+                        document.getElementById(
+                            `likes-count-${postId}`
+                        );
+
+                    if (likeCount) {
+
+                        likeCount.innerHTML =
+                            `${data.likes} likes`;
+
+                    }
+
+                    const icon =
+                        button.querySelector("i");
+
+                    if (data.liked) {
+
+                        button.classList.remove(
+                            "text-[#65676b]"
+                        );
+
+                        button.classList.add(
+                            "text-red-500"
+                        );
+
+                        icon.classList.remove(
+                            "far"
+                        );
+
+                        icon.classList.add(
+                            "fas"
+                        );
+
+                    }
+
+                    else {
+
+                        button.classList.remove(
+                            "text-red-500"
+                        );
+
+                        button.classList.add(
+                            "text-[#65676b]"
+                        );
+
+                        icon.classList.remove(
+                            "fas"
+                        );
+
+                        icon.classList.add(
+                            "far"
+                        );
+
+                    }
+
+                })
+
+                .catch(error => {
+
+                    console.error(error);
+
+                });
 
         }
 
-    )
 
-    .then(response => response.json())
 
-    .then(data => {
+        // ==========================================
+        // COMMENT POST
+        // ==========================================
 
-        if (data.success) {
+        function submitComment(event, postId) {
 
-            input.value = "";
-            
-            // Scroll comment list to bottom to show new comment
-            const commentList =
+            event.preventDefault();
+
+            const input =
                 document.getElementById(
-                    `comment-list-${postId}`
+                    `comment-input-${postId}`
                 );
-            
-            if (commentList) {
-                setTimeout(() => {
-                    commentList.scrollTop = commentList.scrollHeight;
-                }, 100);
+
+            const formData =
+                new FormData();
+
+            formData.append(
+                "content",
+                input.value
+            );
+
+            fetch(
+
+                `/accounts/comment/post/${postId}/`,
+
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "X-CSRFToken":
+                            getCookie("csrftoken")
+
+                    },
+
+                    body: formData
+
+                }
+
+            )
+
+                .then(response => response.json())
+
+                .then(data => {
+
+                    if (data.success) {
+
+                        input.value = "";
+
+                        // Scroll comment list to bottom to show new comment
+                        const commentList =
+                            document.getElementById(
+                                `comment-list-${postId}`
+                            );
+
+                        if (commentList) {
+                            setTimeout(() => {
+                                commentList.scrollTop = commentList.scrollHeight;
+                            }, 100);
+                        }
+
+                    }
+
+                    else {
+
+                        alert(data.message);
+
+                    }
+
+                })
+
+                .catch(error => {
+
+                    console.error(error);
+                    alert("Error posting comment. Please try again.");
+
+                });
+
+            return false;
+
+        }
+
+        // ==========================================
+        // DELETE COMMENT FROM WEBSOCKET
+        // ==========================================
+
+        function deleteCommentWebSocket(event, commentId) {
+
+            event.preventDefault();
+
+            if (!confirm('Delete this comment?')) {
+                return false;
             }
 
-        }
+            fetch(
+                `/accounts/delete/comment/${commentId}/`,
+                {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": getCookie("csrftoken"),
+                        "Content-Type": "application/json"
+                    }
+                }
+            )
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const commentEl = document.getElementById(`comment-${commentId}`);
+                        if (commentEl) {
+                            commentEl.remove();
+                        }
+                        console.log("Comment deleted:", commentId);
+                    } else {
+                        alert(data.message || "Error deleting comment");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error deleting comment:", error);
+                    alert("Error deleting comment. Please try again.");
+                });
 
-        else {
-
-            alert(data.message);
-
-        }
-
-    })
-
-    .catch(error => {
-
-        console.error(error);
-        alert("Error posting comment. Please try again.");
-
-    });
-    
-    return false;
-
-}
-
-// ==========================================
-// DELETE COMMENT FROM WEBSOCKET
-// ==========================================
-
-function deleteCommentWebSocket(event, commentId) {
-    
-    event.preventDefault();
-    
-    if (!confirm('Delete this comment?')) {
-        return false;
-    }
-    
-    fetch(
-        `/accounts/delete/comment/${commentId}/`,
-        {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": getCookie("csrftoken"),
-                "Content-Type": "application/json"
-            }
-        }
-    )
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const commentEl = document.getElementById(`comment-${commentId}`);
-            if (commentEl) {
-                commentEl.remove();
-            }
-            console.log("Comment deleted:", commentId);
-        } else {
-            alert(data.message || "Error deleting comment");
-        }
-    })
-    .catch(error => {
-        console.error("Error deleting comment:", error);
-        alert("Error deleting comment. Please try again.");
-    });
-    
-    return false;
-}    </script>
+            return false;
+        }    </script>
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

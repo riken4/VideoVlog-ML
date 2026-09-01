@@ -109,19 +109,27 @@
                     <div class="p-4 flex items-center gap-3">
                         <div
                             class="profile-pic w-10 h-10 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
-                            {% if post.author.profile_picture %}
-                            <a href="{% url 'profile' post.author.username %}"><img
-                                    src="{{ post.author.profile_picture.url }}"
-                                    class="rounded-full w-10 h-10 object-cover"></a>
+                            {% if post.author and post.author.username %}
+                                {% if post.author.profile_picture %}
+                                <a href="{% url 'profile' post.author.username %}"><img
+                                        src="{{ post.author.profile_picture.url }}"
+                                        class="rounded-full w-10 h-10 object-cover"></a>
+                                {% else %}
+                                <span class="rounded-full w-10 h-10 bg-[#1877f2] flex items-center justify-center text-white font-bold">{{ post.author.username|first|upper }}</span>
+                                {% endif %}
                             {% else %}
-                            {{ post.author.username }}
+                            <span class="rounded-full w-10 h-10 bg-neutral-400 flex items-center justify-center text-white font-bold">U</span>
                             {% endif %}
 
                         </div>
                         <div class="flex-1">
+                            {% if post.author and post.author.username %}
                             <a href="{% url 'profile' post.author.username %}"
                                 class="font-semibold text-[#050505] no-underline hover:underline">{{
                                 post.author.username }}</a>
+                            {% else %}
+                            <span class="font-semibold text-[#050505]">Unknown User</span>
+                            {% endif %}
                             <div class="text-sm text-[#65676b]">{{ post.created_at|timesince }} ago {% if post.is_edited
                                 %}(edited){% endif %}</div>
                         </div>

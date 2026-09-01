@@ -1,0 +1,276 @@
+{% extends 'components/base.html' %}
+
+{% block title %}Search — Users & Videos | Video Vlog{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6">
+
+    <!-- Header & Search Bar -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <i class="fas fa-search text-blue-600"></i> Search
+        </h1>
+
+        <form method="GET" action="{% url 'search_users' %}" class="relative flex items-center gap-2">
+            <div class="relative flex-1">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    placeholder="Search users, video titles, or descriptions..."
+                    class="w-full pl-11 pr-10 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition text-sm sm:text-base"
+                    autofocus
+                >
+                {% if query %}
+                <a href="{% url 'search_users' %}" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
+                    <i class="fas fa-times-circle"></i>
+                </a>
+                {% endif %}
+            </div>
+
+            {% if tab and tab != 'all' %}
+            <input type="hidden" name="tab" value="{{ tab }}">
+            {% endif %}
+
+            <button
+                type="submit"
+                class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold transition flex items-center gap-2 shrink-0 shadow-sm"
+            >
+                <i class="fas fa-arrow-right"></i>
+                <span class="hidden sm:inline">Search</span>
+            </button>
+        </form>
+
+        <!-- Navigation Tabs -->
+        {% if query %}
+        <div class="flex items-center gap-2 mt-5 border-b border-gray-100 pb-1">
+            <a
+                href="{% url 'search_users' %}?q={{ query|urlencode }}&tab=all"
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition {% if tab == 'all' %}bg-blue-50 text-blue-600{% else %}text-gray-600 hover:bg-gray-100{% endif %}"
+            >
+                All ({{ videos_count|add:users_count }})
+            </a>
+            <a
+                href="{% url 'search_users' %}?q={{ query|urlencode }}&tab=videos"
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 {% if tab == 'videos' %}bg-blue-50 text-blue-600{% else %}text-gray-600 hover:bg-gray-100{% endif %}"
+            >
+                <i class="fas fa-play-circle text-xs"></i> Videos ({{ videos_count }})
+            </a>
+            <a
+                href="{% url 'search_users' %}?q={{ query|urlencode }}&tab=users"
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 {% if tab == 'users' %}bg-blue-50 text-blue-600{% else %}text-gray-600 hover:bg-gray-100{% endif %}"
+            >
+                <i class="fas fa-user text-xs"></i> Users ({{ users_count }})
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Search Results Content -->
+    {% if query %}
+
+        <!-- NO RESULTS FOUND -->
+        {% if videos_count == 0 and users_count == 0 %}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-2xl">
+                <i class="fas fa-search"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-1">No matches found for "{{ query }}"</h3>
+            <p class="text-gray-500 text-sm max-w-md mx-auto mb-6">
+                Try searching for different keywords, checking spelling, or browsing general categories.
+            </p>
+            <a href="{% url 'home' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition">
+                <i class="fas fa-home"></i> Return to Feed
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- 1. VIDEOS SECTION -->
+        {% if tab == 'all' or tab == 'videos' %}
+            {% if videos %}
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <i class="fas fa-video text-blue-600"></i> Videos
+                        <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{{ videos|length }}</span>
+                    </h2>
+                    {% if tab == 'all' and videos_count > 4 %}
+                    <a href="{% url 'search_users' %}?q={{ query|urlencode }}&tab=videos" class="text-sm font-semibold text-blue-600 hover:underline">
+                        See all ({{ videos_count }}) →
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for post in videos %}
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition flex flex-col justify-between">
+
+                        <!-- Media Container -->
+                        <div class="relative bg-black aspect-video w-full flex items-center justify-center overflow-hidden group">
+                            {% if post.video %}
+                                <video src="{{ post.video.url }}" class="w-full h-full object-cover" preload="metadata" controls playsinline></video>
+                            {% elif post.image %}
+                                <img src="{{ post.image.url }}" class="w-full h-full object-cover" alt="Post thumbnail">
+                            {% else %}
+                                <div class="p-6 text-center text-gray-400 text-sm">
+                                    {{ post.content|truncatechars:120 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="p-4 flex-1 flex flex-col justify-between">
+                            <div>
+                                <!-- Author info -->
+                                <div class="flex items-center gap-2 mb-2">
+                                    <a href="{% url 'profile' post.author.username %}" class="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-gray-200">
+                                        {% if post.author.profile_picture %}
+                                            <img src="{{ post.author.profile_picture.url }}" class="w-full h-full object-cover">
+                                        {% else %}
+                                            <div class="w-full h-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                                                {{ post.author.username|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                    </a>
+                                    <a href="{% url 'profile' post.author.username %}" class="text-xs font-semibold text-gray-700 hover:underline truncate">
+                                        @{{ post.author.username }}
+                                    </a>
+                                    <span class="text-gray-400 text-xs">• {{ post.created_at|timesince }} ago</span>
+                                </div>
+
+                                <!-- Title & Description -->
+                                {% if post.title %}
+                                    <h3 class="font-bold text-gray-900 text-base mb-1 line-clamp-1">
+                                        {{ post.title }}
+                                    </h3>
+                                {% endif %}
+
+                                <p class="text-gray-600 text-xs sm:text-sm line-clamp-2 mb-3">
+                                    {{ post.content }}
+                                </p>
+                            </div>
+
+                            <!-- Metrics footer -->
+                            <div class="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                                <span class="flex items-center gap-1">
+                                    <i class="fas fa-heart text-red-500"></i> {{ post.total_likes }}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <i class="fas fa-comment text-blue-500"></i> {{ post.total_comments }}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <i class="fas fa-eye text-gray-400"></i> {{ post.views_count|default:post.total_likes }} views
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif tab == 'videos' %}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 mb-8">
+                No videos found matching "{{ query }}"
+            </div>
+            {% endif %}
+        {% endif %}
+
+        <!-- 2. USERS SECTION -->
+        {% if tab == 'all' or tab == 'users' %}
+            {% if users %}
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <i class="fas fa-users text-blue-600"></i> Creators & Users
+                        <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{{ users|length }}</span>
+                    </h2>
+                    {% if tab == 'all' and users_count > 4 %}
+                    <a href="{% url 'search_users' %}?q={{ query|urlencode }}&tab=users" class="text-sm font-semibold text-blue-600 hover:underline">
+                        See all ({{ users_count }}) →
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {% for u in users %}
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between gap-3 hover:shadow-md transition">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <a href="{% url 'profile' u.username %}" class="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-gray-200">
+                                {% if u.profile_picture %}
+                                    <img src="{{ u.profile_picture.url }}" class="w-full h-full object-cover" alt="{{ u.username }}">
+                                {% else %}
+                                    <div class="w-full h-full bg-blue-600 text-white flex items-center justify-center font-bold text-base">
+                                        {{ u.username|first|upper }}
+                                    </div>
+                                {% endif %}
+                            </a>
+                            <div class="min-w-0">
+                                <a href="{% url 'profile' u.username %}" class="font-bold text-gray-900 text-sm hover:underline block truncate">
+                                    {{ u.username }}
+                                </a>
+                                {% if u.bio %}
+                                    <p class="text-xs text-gray-500 truncate max-w-[200px]">
+                                        {{ u.bio }}
+                                    </p>
+                                {% endif %}
+                                <p class="text-[11px] text-gray-400">
+                                    {{ u.get_followers_count|default:0 }} followers
+                                </p>
+                            </div>
+                        </div>
+
+                        <a
+                            href="{% url 'profile' u.username %}"
+                            class="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-semibold text-xs transition shrink-0"
+                        >
+                            View
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif tab == 'users' %}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 mb-8">
+                No users found matching "{{ query }}"
+            </div>
+            {% endif %}
+        {% endif %}
+
+    {% else %}
+
+        <!-- Empty search initial state (Suggestions & Quick Categories) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+            <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+                <i class="fas fa-compass"></i>
+            </div>
+            <h3 class="text-base font-bold text-gray-800 mb-1">Discover Creators & Videos</h3>
+            <p class="text-gray-500 text-xs sm:text-sm max-w-sm mx-auto mb-6">
+                Search across all creators, video titles, hashtags, and descriptions.
+            </p>
+
+            <!-- Popular Search Tags -->
+            <div class="flex flex-wrap items-center justify-center gap-2">
+                <span class="text-xs text-gray-400 font-medium">Try searching:</span>
+                <a href="{% url 'search_users' %}?q=travel" class="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-xs font-medium text-gray-600 transition">
+                    #travel
+                </a>
+                <a href="{% url 'search_users' %}?q=mustang" class="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-xs font-medium text-gray-600 transition">
+                    #mustang
+                </a>
+                <a href="{% url 'search_users' %}?q=study" class="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-xs font-medium text-gray-600 transition">
+                    #study
+                </a>
+                <a href="{% url 'search_users' %}?q=nature" class="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-xs font-medium text-gray-600 transition">
+                    #nature
+                </a>
+                <a href="{% url 'search_users' %}?q=bike" class="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-xs font-medium text-gray-600 transition">
+                    #bike
+                </a>
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}
