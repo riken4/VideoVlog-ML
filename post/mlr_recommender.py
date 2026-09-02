@@ -8,7 +8,7 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from post.models import Post, WatchHistory
+from post.models import Like, Post, WatchHistory
 from post.mlr_features import (
     FEATURE_NAMES,
     fit_or_load_tfidf,
@@ -64,14 +64,30 @@ def recommend_posts_for_user(user, top_n=20, return_all=True, only_following=Fal
     5. When All Videos Are Watched: Automatically mixes / remixes the feed on every refresh.
     6. If only_following=True: Restricts candidates strictly to followed creators and ranks them with MLR.
     """
+    # A like is an input to the user's taste profile, not a recommendation for
+    # that exact video.  Leaving liked posts in the candidate set gives the
+    # model a direct ``user_liked`` boost and can put the just-liked video at
+    # the top of the feed instead of related, unseen videos.
+    liked_ids = set()
+    if user and user.is_authenticated:
+        liked_ids = set(
+            Like.objects.filter(user=user).values_list("post_id", flat=True)
+        )
+
     if only_following and user and user.is_authenticated:
         from accounts.models import Follow
         following_ids = set(
             Follow.objects.filter(follower=user).values_list("following_id", flat=True)
         )
-        posts = list(Post.objects.filter(author_id__in=following_ids).select_related("author"))
+        post_queryset = Post.objects.filter(author_id__in=following_ids)
     else:
-        posts = list(Post.objects.select_related("author").all())
+        post_queryset = Post.objects.all()
+
+    # Keep liked videos in the preference history (handled by the feature
+    # builder), but do not return them as recommendation candidates.
+    posts = list(
+        post_queryset.exclude(id__in=liked_ids).select_related("author")
+    )
 
     if not posts:
         return []

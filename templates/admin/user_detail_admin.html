@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-header {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #ddd;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.blocked {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .user-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .meta-item {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .meta-item strong {
+            color: #333;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-block {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-block:hover {
+            background: #e53e3e;
+        }
+        
+        .btn-unblock {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-unblock:hover {
+            background: #38a169;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 15px;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .block-history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .block-history-table th,
+        .block-history-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .block-history-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .block-history-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge.inactive {
+            background: #e2e8f0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'admin_users' %}" class="back-link">← Back to Users</a>
+        
+        <div class="header">
+            <div class="user-header">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="avatar">
+                {% else %}
+                    <div class="avatar" style="background: #667eea; display: flex; align-items: center; justify-content: center; color: white; font-size: 48px; font-weight: bold;">{{ user.username|first|upper }}</div>
+                {% endif %}
+                
+                <div class="user-details">
+                    <h1>{{ user.username }}</h1>
+                    
+                    {% if user.is_blocked %}
+                        <span class="status-badge blocked">🔒 BLOCKED</span>
+                    {% else %}
+                        <span class="status-badge active">✓ ACTIVE</span>
+                    {% endif %}
+                    
+                    <div class="user-meta">
+                        <div class="meta-item">
+                            <strong>Email:</strong> {{ user.email }}
+                        </div>
+                        <div class="meta-item">
+                            <strong>Full Name:</strong> {{ user.get_full_name|default:"Not set" }}
+                        </div>
+                        <div class="meta-item">
+                            <strong>Location:</strong> {{ user.location|default:"Not set" }}
+                        </div>
+                        <div class="meta-item">
+                            <strong>Joined:</strong> {{ user.created_at|date:"M d, Y" }}
+                        </div>
+                    </div>
+                    
+                    {% if user.bio %}
+                    <div class="meta-item" style="margin-top: 15px; grid-column: 1/-1;">
+                        <strong>Bio:</strong> {{ user.bio }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="action-buttons">
+                        {% if user.is_blocked %}
+                            <a href="{% url 'admin_unblock_user' user.id %}" class="btn btn-unblock">🔓 Unblock User</a>
+                        {% else %}
+                            <a href="{% url 'admin_block_user' user.id %}" class="btn btn-block">🔒 Block User</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ posts.count }}</div>
+                    <div class="stat-label">Posts Created</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ likes_count }}</div>
+                    <div class="stat-label">Likes Given</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ comments_count }}</div>
+                    <div class="stat-label">Comments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ followers.count }}</div>
+                    <div class="stat-label">Followers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ following.count }}</div>
+                    <div class="stat-label">Following</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Activity & History</h2>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab(event, 'block-history')">Block History</div>
+                {% if posts %}
+                <div class="tab" onclick="switchTab(event, 'recent-posts')">Recent Posts ({{ posts.count }})</div>
+                {% endif %}
+            </div>
+            
+            <div id="block-history" class="tab-content active">
+                {% if block_history %}
+                    <table class="block-history-table">
+                        <thead>
+                            <tr>
+                                <th>Blocked By</th>
+                                <th>Date</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in block_history %}
+                            <tr>
+                                <td><strong>{{ record.blocked_by.username }}</strong></td>
+                                <td>{{ record.blocked_at|date:"M d, Y H:i" }}</td>
+                                <td>{{ record.reason|default:"No reason provided" }}</td>
+                                <td>
+                                    {% if record.is_active %}
+                                        <span class="badge active">🔒 Active</span>
+                                    {% else %}
+                                        <span class="badge inactive">✓ Unblocked on {{ record.unblocked_at|date:"M d, Y H:i" }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No block history for this user</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            {% if posts %}
+            <div id="recent-posts" class="tab-content">
+                <div style="display: grid; gap: 15px;">
+                    {% for post in posts|slice:":5" %}
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea;">
+                        <h4 style="color: #333; margin-bottom: 8px;">{{ post.title|default:"Untitled" }}</h4>
+                        <p style="color: #666; font-size: 13px; margin-bottom: 8px;">{{ post.content|truncatewords:20 }}</p>
+                        <p style="color: #999; font-size: 12px;">Posted: {{ post.created_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(event, tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Deactivate all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Activate clicked tab
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

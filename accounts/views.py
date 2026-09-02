@@ -8,6 +8,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
 from django.utils.timesince import timesince
+from django.utils import timezone
 from django.db.models import Q
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -16,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 import random
 
-from .models import CustomUser, Follow
+from .models import CustomUser, Follow, BlockedUser
 from post.models import Notification, Post, Like, Comment
 from post.serializers import NotificationSerializer
 from post.train_mlr import train
@@ -89,7 +90,7 @@ def login_view(request):
         return redirect("home")
 
     if request.method == "POST":
-        username = request.POST.get("username")
+        username = request.POST.get("username", "").strip()
         password = request.POST.get("password")
 
         user = authenticate(
@@ -105,6 +106,9 @@ def login_view(request):
             messages.success(request, f"Welcome back, {user.username}")
             return redirect("home")
         else:
+            if CustomUser.objects.filter(username=username, is_blocked=True).exists():
+                messages.error(request, "This account has been blocked by an administrator.")
+                return redirect("login")
             messages.error(request, "Invalid username and password")
             return redirect("login")
 
@@ -782,3 +786,199 @@ def set_password(request):
 #         "comments_count": comments_count,
 #     }
 #     return render(request, "admin/user_detail.html", context)
+
+
+# Admin Views for User Blocking Management
+
+@staff_member_required
+def admin_dashboard(request):
+    """Admin dashboard showing block management overview"""
+    total_users = CustomUser.objects.count()
+    blocked_users = CustomUser.objects.filter(is_blocked=True).count()
+    active_blocks = BlockedUser.objects.filter(is_active=True).count()
+    
+    context = {
+        "total_users": total_users,
+        "blocked_users": blocked_users,
+        "active_blocks": active_blocks,
+    }
+    return render(request, "admin/dashboard.html", context)
+
+
+@staff_member_required
+def admin_users(request):
+    """Admin view to list all users with block status"""
+    search_query = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', 'all')
+    
+    users = CustomUser.objects.all().order_by('-created_at')
+    
+    # Apply search filter
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+    
+    # Apply status filter
+    if status_filter == 'blocked':
+        users = users.filter(is_blocked=True)
+    elif status_filter == 'active':
+        users = users.filter(is_blocked=False)
+    
+    # Paginate results
+    from django.core.paginator import Paginator
+    paginator = Paginator(users, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        "page_obj": page_obj,
+        "users": page_obj.object_list,
+        "search_query": search_query,
+        "status_filter": status_filter,
+        "total_users": CustomUser.objects.count(),
+        "blocked_count": CustomUser.objects.filter(is_blocked=True).count(),
+    }
+    return render(request, "admin/users.html", context)
+
+
+@staff_member_required
+def admin_block_user(request, user_id):
+    """Block a user"""
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    if request.method == "POST":
+        reason = request.POST.get('reason', '').strip()
+        
+        if not user.is_blocked:
+            user.is_blocked = True
+            user.blocked_reason = reason
+            user.blocked_date = timezone.now()
+            user.save()
+            
+            # Create a block record
+            BlockedUser.objects.create(
+                user=user,
+                blocked_by=request.user,
+                reason=reason
+            )
+            
+            messages.success(request, f"User '{user.username}' has been blocked successfully.")
+        else:
+            messages.warning(request, f"User '{user.username}' is already blocked.")
+        
+        return redirect('admin_users')
+    
+    context = {"user": user}
+    return render(request, "admin/block_user.html", context)
+
+
+@staff_member_required
+def admin_unblock_user(request, user_id):
+    """Unblock a user"""
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    if request.method == "POST":
+        if user.is_blocked:
+            user.is_blocked = False
+            user.blocked_reason = ""
+            user.blocked_date = None
+            user.save()
+            
+            # Mark all active block records as inactive
+            BlockedUser.objects.filter(user=user, is_active=True).update(
+                is_active=False,
+                unblocked_at=timezone.now()
+            )
+            
+            messages.success(request, f"User '{user.username}' has been unblocked successfully.")
+        else:
+            messages.warning(request, f"User '{user.username}' is not blocked.")
+        
+        return redirect('admin_users')
+    
+    context = {"user": user}
+    return render(request, "admin/unblock_user.html", context)
+
+
+@staff_member_required
+def admin_user_detail(request, user_id):
+    """View detailed information about a user"""
+    user = get_object_or_404(CustomUser, id=user_id)
+    posts = Post.objects.filter(author=user).order_by('-created_at')
+    followers = Follow.objects.filter(following=user).select_related('follower')
+    following = Follow.objects.filter(follower=user).select_related('following')
+    likes_count = Like.objects.filter(user=user).count()
+    comments_count = Comment.objects.filter(author=user).count()
+    
+    # Get block history
+    block_history = BlockedUser.objects.filter(user=user).order_by('-blocked_at')
+    
+    context = {
+        "user": user,
+        "posts": posts,
+        "followers": followers,
+        "following": following,
+        "likes_count": likes_count,
+        "comments_count": comments_count,
+        "block_history": block_history,
+    }
+    return render(request, "admin/user_detail_admin.html", context)
+
+
+@staff_member_required
+def admin_blocked_users(request):
+    """View all blocked users"""
+    search_query = request.GET.get('search', '').strip()
+    
+    blocked_users = CustomUser.objects.filter(is_blocked=True).order_by('-blocked_date')
+    
+    if search_query:
+        blocked_users = blocked_users.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    # Get latest block records for each blocked user
+    from django.core.paginator import Paginator
+    paginator = Paginator(blocked_users, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        "page_obj": page_obj,
+        "blocked_users": page_obj.object_list,
+        "search_query": search_query,
+        "total_blocked": CustomUser.objects.filter(is_blocked=True).count(),
+    }
+    return render(request, "admin/blocked_users.html", context)
+
+
+@staff_member_required  
+def admin_block_history(request):
+    """View block/unblock history"""
+    search_query = request.GET.get('search', '').strip()
+    
+    block_records = BlockedUser.objects.all().order_by('-blocked_at')
+    
+    if search_query:
+        block_records = block_records.filter(
+            Q(user__username__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(blocked_by__username__icontains=search_query)
+        )
+    
+    from django.core.paginator import Paginator
+    paginator = Paginator(block_records, 30)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        "page_obj": page_obj,
+        "block_records": page_obj.object_list,
+        "search_query": search_query,
+    }
+    return render(request, "admin/block_history.html", context)
