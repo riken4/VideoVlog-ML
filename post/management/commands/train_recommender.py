@@ -1,14 +1,11 @@
 from django.core.management.base import BaseCommand
-
-from post.train_model import train
+from post.train_mlr import train
 
 
 class Command(BaseCommand):
-
-    help = "Train the recommendation model"
+    help = "Train the MLR recommendation model and TF-IDF pipeline"
 
     def handle(self, *args, **kwargs):
-
         self.stdout.write(
             self.style.SUCCESS(
                 "Starting recommendation training..."
@@ -19,6 +16,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                "Training completed successfully!"
+                "MLR Recommendation training completed successfully!"
             )
         )

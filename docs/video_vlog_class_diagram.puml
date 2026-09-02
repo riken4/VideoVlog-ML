@@ -1,0 +1,162 @@
+@startuml VideoVlog_Class_Diagram
+title Video Vlog — Domain Class Diagram
+
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "Accounts" {
+  abstract class AbstractUser {
+    +id: integer
+    +username: string
+    +email: string
+    +first_name: string
+    +last_name: string
+    +is_active: boolean
+    +is_staff: boolean
+    +date_joined: datetime
+  }
+
+  class CustomUser {
+    +bio: text
+    +profile_picture: image
+    +location: string
+    +created_at: datetime
+    +updated_at: datetime
+    +is_blocked: boolean
+    +blocked_reason: text
+    +blocked_date: datetime
+    +get_followers_count(): integer
+    +get_following_count(): integer
+  }
+
+  class Follow {
+    +id: integer
+    +created_at: datetime
+  }
+
+  class BlockedUser {
+    +id: integer
+    +reason: text
+    +blocked_at: datetime
+    +unblocked_at: datetime
+    +is_active: boolean
+  }
+}
+
+package "Video Posts" {
+  class Post {
+    +id: integer
+    +title: string
+    +content: text
+    +image: image
+    +video: file
+    +thumbnail: image
+    +created_at: datetime
+    +updated_at: datetime
+    +is_edited: boolean
+    +total_likes: integer
+    +total_comments: integer
+  }
+
+  class Like {
+    +id: integer
+    +created_at: datetime
+  }
+
+  class Comment {
+    +id: integer
+    +content: text
+    +created_at: datetime
+    +updated_at: datetime
+  }
+
+  class WatchHistory {
+    +id: integer
+    +watched_at: datetime
+    +watch_duration: integer
+    +completed: boolean
+  }
+
+  class Notification {
+    +id: integer
+    +notification_type: like | comment | follow
+    +is_read: boolean
+    +created_at: datetime
+  }
+}
+
+package "Machine-Learning Algorithms" {
+  class RecommendationEngine <<service>> {
+    - mlr_model: Ridge regression model
+    - tfidf_vectorizer: TfidfVectorizer
+    - feature_names: list
+    - similarity_matrix: cosine similarity
+    + recommend_posts_for_user(user, top_n): ranked Post[]
+    + content_based_recommend(post_or_query, top_n): Post[]
+    + build_features_for_user(user, posts): DataFrame
+    + compute_user_content_scores(user, posts): score map
+    + build_collaborative_scores(users, posts): score map
+    + exclude_liked_posts(user, candidates): Post[]
+    + rank_unwatched_first(results): Post[]
+  }
+
+  class CommentModerationEngine <<service>> {
+    - xgb_comment_model: XGBoost classifier
+    - vectorizer: text vectorizer
+    - toxicity_threshold: 0.40
+    + normalize_comment(text): string
+    + predict_comment(text): safe | toxic
+  }
+}
+
+CustomUser --|> AbstractUser
+
+CustomUser "1" <-- "0..*" Post : author
+CustomUser "1" <-- "0..*" Like : user
+Post       "1" <-- "0..*" Like : post
+CustomUser "1" <-- "0..*" Comment : author
+Post       "1" <-- "0..*" Comment : post
+CustomUser "1" <-- "0..*" WatchHistory : user
+Post       "1" <-- "0..*" WatchHistory : post
+
+CustomUser "1" <-- "0..*" Follow : follower
+CustomUser "1" <-- "0..*" Follow : following
+
+CustomUser "1" <-- "0..*" BlockedUser : user
+CustomUser "1" <-- "0..*" BlockedUser : blocked_by
+
+CustomUser "1" <-- "0..*" Notification : recipient
+CustomUser "1" <-- "0..*" Notification : sender
+Post "0..1" <-- "0..*" Notification : post
+Comment "0..1" <-- "0..*" Notification : comment
+
+' Algorithm dependencies (dashed arrows match the reference diagram style).
+Like ..> RecommendationEngine : preference signal
+Comment ..> RecommendationEngine : preference signal
+WatchHistory ..> RecommendationEngine : watch signal
+Follow ..> RecommendationEngine : creator affinity
+Post ..> RecommendationEngine : candidate content
+Comment ..> CommentModerationEngine : validate before saving
+
+note right of RecommendationEngine
+  Hybrid personalised ranking:
+  1. TF-IDF + cosine similarity scores related content.
+  2. Likes, comments, watch duration/completion,
+     follows and popularity produce model features.
+  3. Ridge (MLR) predicts interest; fallback is
+     a weighted heuristic.
+  4. Exclude liked posts, then rank unwatched
+     videos before watched videos.
+end note
+
+note right of Follow
+  Self-referencing relationship:
+  one user follows another user.
+end note
+
+note bottom of Notification
+  A notification may refer to a post,
+  a comment, or only a follow event.
+end note
+@enduml

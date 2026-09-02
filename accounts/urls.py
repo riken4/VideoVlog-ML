@@ -21,8 +21,16 @@ from .views import (
     forgot_password,
     verify_otp,
     set_password,
-    edit_comment
-
+    edit_comment,
+    search_users,
+    following_feed_view,
+    admin_dashboard,
+    admin_users,
+    admin_block_user,
+    admin_unblock_user,
+    admin_user_detail,
+    admin_blocked_users,
+    admin_block_history,
 )
 
 urlpatterns = [
@@ -34,6 +42,7 @@ urlpatterns = [
     path("my/profile/", my_profile_view, name="myprofile"),
     path("follow_toggle/<str:username>/", follow_toggle, name="follow_toggle"),
     path("", home_view, name="home"),
+    path("following/", following_feed_view, name="following_feed"),
     path("create/post/", create_post, name="create_post"),
     path("edit/post/<int:post_id>/", edit_post, name="edit_post"),
     path("delete/post/<int:post_id>/", delete_post, name="delete_post"),
@@ -50,4 +59,14 @@ urlpatterns = [
     path("forgot_password", forgot_password, name="forgot_password"),
     path("verify_otp", verify_otp, name="verify_otp"),
     path("set_password", set_password, name="set_password"),
+    path("search/", search_users, name="search_users"),
+    
+    # Admin Routes for User Management
+    path("admin/dashboard/", admin_dashboard, name="admin_dashboard"),
+    path("admin/users/", admin_users, name="admin_users"),
+    path("admin/users/<int:user_id>/", admin_user_detail, name="admin_user_detail"),
+    path("admin/users/<int:user_id>/block/", admin_block_user, name="admin_block_user"),
+    path("admin/users/<int:user_id>/unblock/", admin_unblock_user, name="admin_unblock_user"),
+    path("admin/blocked-users/", admin_blocked_users, name="admin_blocked_users"),
+    path("admin/block-history/", admin_block_history, name="admin_block_history"),
 ]

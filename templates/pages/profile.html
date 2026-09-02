@@ -7,7 +7,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
         <div class="flex flex-col sm:flex-row items-start gap-5">
             <!-- Profile Picture / Initial -->
-            <div class="shrink-0">    
+            <div class="shrink-0">
                 {% if profile_user.profile_picture %}
                     <img src="{{ profile_user.profile_picture.url }}" class="w-20 h-20 rounded-full object-cover border-2 border-gray-100 shadow-sm" alt="{{ profile_user.username }}">
                 {% else %}
@@ -20,7 +20,7 @@
             <!-- Profile Info & Details -->
             <div class="flex-1 w-full">
                 <h3 class="text-2xl font-bold text-gray-900 leading-tight">{{ profile_user.username }}</h3>
-                
+
                 {% if profile_user.bio %}
                     <p class="text-gray-700 mt-1 text-sm sm:text-base leading-relaxed">{{ profile_user.bio }}</p>
                 {% else %}
@@ -49,11 +49,14 @@
                     </div>
                 </div>
 
-                <!-- Profile Actions (Edit / Follow) -->
-                <div class="mt-4">
+                <!-- Profile Actions (Edit / Follow / Create Post) -->
+                <div class="mt-4 flex items-center gap-2 flex-wrap">
                     {% if profile_user == user %}
-                        <a href="{% url 'edit_profile' %}" class="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-colors duration-150">
-                            Edit Profile
+                        <a href="{% url 'edit_profile' %}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm rounded-lg shadow-sm transition-colors duration-150">
+                            <i class="fas fa-edit text-xs"></i> Edit Profile
+                        </a>
+                        <a href="{% url 'create_post' %}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#fe2c55] hover:bg-[#e0264a] text-white font-medium text-sm rounded-lg shadow-sm transition-colors duration-150">
+                            <i class="fas fa-plus text-xs"></i> Create Post
                         </a>
                     {% else %}
                         <form method="post" action="{% url 'follow_toggle' profile_user.username %}" class="inline">
@@ -68,142 +71,427 @@
         </div>
     </div>
 
-    <!-- Posts Section Header -->
-    <h5 class="text-lg font-semibold text-gray-800 mb-4">Posts</h5>
+    <!-- Posts Section Tabs -->
+    <div class="flex items-center justify-center gap-10 border-t border-gray-200 pt-3 mb-1 uppercase text-xs font-semibold tracking-wide">
+        <span class="flex items-center gap-1.5 text-gray-900 border-t-2 border-gray-900 -mt-3.5 pt-3.5">
+            <i class="fas fa-th"></i> Posts
+        </span>
+    </div>
 
-    <!-- Posts List -->
-    <div class="space-y-4">
+    <!-- Posts Grid -->
+    {% if posts %}
+    <div class="grid grid-cols-3 gap-1 md:gap-6 mt-4">
         {% for post in posts %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <!-- Post Header -->
-            <div class="p-4 flex items-center gap-3">
-                <div class="shrink-0">
-                    {% if post.author.profile_picture %}
-                        <a href="{% url 'profile' post.author.username %}">
-                            <img src="{{ post.author.profile_picture.url }}" class="w-10 h-10 rounded-full object-cover border border-gray-100" alt="{{ post.author.username }}">
-                        </a>
-                    {% else %}
-                        <a href="{% url 'profile' post.author.username %}" class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                            {{ post.author.username.0|upper }}
-                        </a>
+        <div class="post-thumb relative aspect-square bg-neutral-900 cursor-pointer overflow-hidden rounded-sm md:rounded-md group"
+             data-index="{{ forloop.counter0 }}" onclick="openPost({{ forloop.counter0 }})">
+
+            {% if post.video %}
+                {% if post.thumbnail %}
+                    <img src="{{ post.thumbnail.url }}" class="w-full h-full object-cover" alt="">
+                {% else %}
+                    <video src="{{ post.video.url }}" class="w-full h-full object-cover" muted preload="metadata"></video>
+                {% endif %}
+                <div class="absolute top-2 right-2 text-white drop-shadow">
+                    <i class="fas fa-play text-sm"></i>
+                </div>
+                <div class="absolute bottom-2 left-2 flex items-center gap-1.5 text-white text-xs font-semibold drop-shadow">
+                    <i class="fas fa-eye"></i>
+                    <span>{{ post.total_views|default:0 }}</span>
+                </div>
+            {% elif post.image %}
+                <img src="{{ post.image.url }}" class="w-full h-full object-cover" alt="">
+            {% else %}
+                <div class="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-neutral-800">
+                    {% if post.title %}
+                        <div class="text-white text-xs font-semibold mb-1 line-clamp-2">{{ post.title }}</div>
                     {% endif %}
+                    <div class="text-neutral-300 text-xs leading-snug line-clamp-3">{{ post.content|truncatechars:90 }}</div>
                 </div>
+            {% endif %}
 
-                <div class="flex-1 min-w-0">
-                    <a href="{% url 'profile' post.author.username %}" class="font-semibold text-gray-900 hover:underline block truncate text-sm">
-                        {{ post.author.username }}
-                    </a>
-                    <div class="text-xs text-gray-400">
-                        {{ post.created_at|timesince }} ago {% if post.is_edited %}(edited){% endif %}
-                    </div>
-                </div>
+            <!-- Hover overlay with likes / comments -->
+            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-6 text-white font-semibold text-sm">
+                <span class="flex items-center gap-1.5"><i class="fas fa-heart"></i>{{ post.total_likes }}</span>
+                <span class="flex items-center gap-1.5">
+                    <i class="fas fa-comment"></i>
+                    <span class="comment-count" data-post-id="{{ post.id }}">{{ post.total_comments }}</span>
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400 mt-4">
+        <p class="mb-3">No posts yet.</p>
+        {% if profile_user == user %}
+        <a href="{% url 'create_post' %}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#fe2c55] hover:bg-[#e0264a] text-white font-medium text-xs rounded-lg shadow-sm transition">
+            <i class="fas fa-plus"></i> Create your first post
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
 
-                <!-- Post Actions Dropdown (Only Author) -->
-                {% if post.author == user %}
-                <div class="relative group inline-block">
-    <!-- Trigger Button -->
-    <button type="button" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50">
-        <i class="fas fa-ellipsis-h"></i>
+<!-- Post Modal (Instagram-style lightbox) -->
+{% if posts %}
+<div id="post-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90" onclick="if(event.target===this){ closePost(); }">
+
+    <button type="button" onclick="closePost()" aria-label="Close"
+            class="absolute top-5 right-5 text-white text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 z-10">
+        <i class="fas fa-times"></i>
     </button>
 
-    <!-- Dropdown Menu Wrapper (pt-2 keeps hover alive across the gap) -->
-    <div class="hidden group-hover:block absolute right-0 pt-2 z-10">
-        <div class="w-32 bg-white rounded-md shadow-lg border border-gray-100 py-1">
-            <a href="{% url 'edit_post' post.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                Edit
-            </a>
-            <form method="post" action="{% url 'delete_post' post.id %}">
-                {% csrf_token %}
-                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50" onclick="return confirm('Delete this post?')">
-                    Delete
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
+    {% if posts.count > 1 %}
+    <button onclick="event.stopPropagation(); postNav(-1)" aria-label="Previous post"
+            class="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center z-10">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <button onclick="event.stopPropagation(); postNav(1)" aria-label="Next post"
+            class="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center z-10">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+    {% endif %}
+
+    <div class="bg-black w-full h-full md:h-auto md:max-h-[85vh] md:w-auto md:rounded-xl overflow-hidden flex flex-col md:flex-row shadow-2xl" style="max-width:956px;" onclick="event.stopPropagation()">
+
+        {% for post in posts %}
+        <div class="post-card {% if not forloop.first %}hidden{% endif %} flex flex-col md:flex-row w-full h-full" data-index="{{ forloop.counter0 }}" data-post-id="{{ post.id }}">
+
+            <!-- Media Pane -->
+            <div class="relative flex-1 bg-black flex items-center justify-center min-h-0" style="min-height:320px;">
+                {% if post.video %}
+                    <video
+                        data-post-id="{{ post.id }}" src="{{ post.video.url }}"
+                        poster="{% if post.thumbnail %}{{ post.thumbnail.url }}{% endif %}"
+                        class="post-video w-full h-full object-contain"
+                        controls
+                        playsinline>
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="absolute top-3 left-3 flex items-center gap-1.5 text-white text-xs font-semibold bg-black/50 px-2.5 py-1 rounded-full">
+                        <i class="fas fa-eye"></i>
+                        <span>{{ post.total_views|default:0 }} views</span>
+                    </div>
+                {% elif post.image %}
+                    <img src="{{ post.image.url }}" class="w-full h-full object-contain" alt="Post media">
+                {% else %}
+                    <div class="px-8 text-center text-neutral-300 text-base leading-relaxed">
+                        {{ post.content }}
+                    </div>
                 {% endif %}
             </div>
 
-            <!-- Post Content -->
-            <div class="px-4 pb-3 text-gray-800 text-sm sm:text-base leading-relaxed whitespace-pre-line">
-                {{ post.content }}
-            </div>
+            <!-- Sidebar Pane -->
+            <div class="w-full md:w-80 shrink-0 bg-neutral-900 text-white flex flex-col min-h-0 border-t md:border-t-0 md:border-l border-neutral-800">
 
-            <!-- Post Image -->
-            <!-- Video / Image -->
-                    {% if post.video %}
-                    <div class="relative w-full max-h-[600px] bg-black flex justify-center items-center overflow-hidden">
-                        <video
-                            data-post-id="{{ post.id }}" src="{{ post.video.url }}"
-                               poster="{% if post.thumbnail %}{{ post.thumbnail.url }}{% endif %}"
-                               class="w-full h-auto max-h-[600px] object-contain"
-                               controls
-                               muted
-                               loop
-                               playsinline>
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
-            {% endif %}
-
-            <!-- Post Stats -->
-            <div class="px-4 py-2 flex items-center justify-between text-xs text-gray-500 border-b border-gray-50">
-                <span>{{ post.total_likes }} likes</span>
-                <span>{{ post.total_comments }} comments</span>
-            </div>
-
-            <!-- Post Action Buttons -->
-            <div class="px-2 py-1 flex items-center border-b border-gray-100">
-                <form method="post" action="{% url 'like_post' post.id %}" class="flex-1">
-                    {% csrf_token %}
-                    <button type="submit" class="w-full py-2 px-3 flex items-center justify-center gap-2 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors {% if post.id in users_likes %}text-red-500{% else %}text-gray-600 hover:text-gray-800{% endif %}">
-                        <i class="fa{% if post.id in users_likes %}s text-red-500{% else %}r{% endif %} fa-heart"></i>
-                        <span>Like</span>
-                    </button>
-                </form>
-
-                <button class="flex-1 py-2 px-3 flex items-center justify-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-50 transition-colors" onclick="toggleComments({{ post.id }})">
-                    <i class="far fa-comment"></i>
-                    <span>Comment</span>
-                </button>
-            </div>
-
-            <!-- Comments Section -->
-            <div class="p-4 bg-gray-50/50 space-y-3" id="comments-{{ post.id }}" style="display:none;">
-                <form method="post" action="{% url 'comment_post' post.id %}">
-                    {% csrf_token %}
-                    <input type="text" name="content" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                           placeholder="Write a comment..." required>
-                </form>
-
-                <div class="space-y-2 mt-3">
-                    {% for comment in post.comments.all %}
-                    <div class="bg-white p-3 rounded-lg border border-gray-100 text-sm">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="flex-1">
-                                <span class="font-semibold text-gray-900 block text-xs">{{ comment.author.username }}</span>
-                                <div class="text-gray-700 mt-0.5">{{ comment.content }}</div>
+                <!-- Author Header -->
+                <div class="flex items-start gap-3 px-4 pt-4">
+                    <a href="{% url 'profile' post.author.username %}" class="shrink-0">
+                        {% if post.author.profile_picture %}
+                            <img src="{{ post.author.profile_picture.url }}" class="w-9 h-9 rounded-full object-cover" alt="{{ post.author.username }}">
+                        {% else %}
+                            <div class="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm">
+                                {{ post.author.username.0|upper }}
                             </div>
-                            {% if comment.author == user %}
-                            <form method="post" action="{% url 'delete_comment' comment.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="text-gray-400 hover:text-red-500 p-1 text-xs transition-colors" 
-                                        onclick="return confirm('Delete comment?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                            {% endif %}
+                        {% endif %}
+                    </a>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <a href="{% url 'profile' post.author.username %}" class="font-semibold text-sm hover:underline truncate">
+                                {{ post.author.username }}
+                            </a>
+                        </div>
+                        <div class="text-xs text-neutral-500 mt-0.5">
+                            {{ post.created_at|timesince }} ago {% if post.is_edited %}(edited){% endif %}
                         </div>
                     </div>
-                    {% endfor %}
+
+                    {% if post.author == user %}
+                    <div class="relative group inline-block shrink-0">
+                        <button type="button" class="p-1.5 text-neutral-400 hover:text-white rounded-full hover:bg-neutral-800">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                        <div class="hidden group-hover:block absolute right-0 pt-2 z-20">
+                            <div class="w-32 bg-neutral-800 rounded-md shadow-lg border border-neutral-700 py-1">
+                                <a href="{% url 'edit_post' post.id %}" class="block px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-700">
+                                    Edit
+                                </a>
+                                <form method="post" action="{% url 'delete_post' post.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-neutral-700" onclick="return confirm('Delete this post?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
+
+                <!-- Title + Caption -->
+                {% if post.title %}
+                <h4 class="px-4 mt-2 text-sm font-semibold text-white">{{ post.title }}</h4>
+                {% endif %}
+                {% if post.content %}
+                <p class="px-4 mt-1 text-sm text-neutral-200 leading-snug whitespace-pre-line">{{ post.content }}</p>
+                {% endif %}
+
+                <!-- Stats Row -->
+                <div class="flex items-center gap-5 px-4 mt-3">
+                    <form method="post" action="{% url 'like_post' post.id %}" class="flex items-center gap-1.5">
+                        {% csrf_token %}
+                        <button type="submit" class="flex items-center gap-1.5 text-sm {% if post.id in users_likes %}text-red-500{% else %}text-neutral-300 hover:text-white{% endif %}">
+                            <i class="fa{% if post.id in users_likes %}s text-red-500{% else %}r{% endif %} fa-heart text-base"></i>
+                            <span>{{ post.total_likes }}</span>
+                        </button>
+                    </form>
+                    <div class="flex items-center gap-1.5 text-sm text-neutral-300">
+                        <i class="far fa-comment text-base"></i>
+                        <span class="comment-count" data-post-id="{{ post.id }}">{{ post.total_comments }}</span>
+                    </div>
+                    {% if post.video %}
+                    <div class="flex items-center gap-1.5 text-sm text-neutral-300">
+                        <i class="far fa-eye text-base"></i>
+                        <span>{{ post.total_views|default:0 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex items-center gap-5 px-4 mt-4 border-b border-neutral-800 text-sm">
+                    <span class="pb-2 border-b-2 border-white font-semibold text-white">
+                        Comments
+                    </span>
+                </div>
+
+                <!-- Comments List -->
+                <div class="post-comments flex-1 overflow-y-auto px-4 py-3 space-y-2.5" id="comments-{{ post.id }}">
+                    <div class="space-y-2 mt-1">
+                        {% for comment in post.comments.all %}
+                        <div class="bg-neutral-800/60 rounded-lg p-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <span class="font-semibold text-white text-xs">{{ comment.author.username }}</span>
+                                    <div class="text-neutral-200 text-sm mt-0.5">{{ comment.content }}</div>
+                                    <div class="flex items-center gap-3 text-neutral-500 text-xs mt-1.5">
+                                        <span>{{ comment.created_at|timesince }} ago</span>
+                                    </div>
+                                </div>
+                                {% if comment.author == user %}
+                                <form method="post" action="{% url 'delete_comment' comment.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-neutral-500 hover:text-red-500 p-1 text-xs transition-colors"
+                                            onclick="return confirm('Delete comment?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-neutral-500 text-sm text-center py-6 empty-comments-msg">No comments yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Add Comment -->
+                <form method="post" action="{% url 'comment_post' post.id %}" class="flex items-center gap-2 border-t border-neutral-800 p-3" onsubmit="submitComment(event, {{ post.id }})">
+                    {% csrf_token %}
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" class="w-8 h-8 rounded-full object-cover shrink-0" alt="{{ user.username }}">
+                    {% else %}
+                        <div class="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            {{ user.username.0|upper }}
+                        </div>
+                    {% endif %}
+                    <input type="text" name="content" required
+                        class="flex-1 bg-neutral-800 border border-neutral-700 rounded-full px-4 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                        placeholder="Add comment...">
+                    <button type="submit" class="w-9 h-9 shrink-0 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-colors">
+                        <i class="fas fa-paper-plane text-sm"></i>
+                    </button>
+                </form>
             </div>
-        </div>
-        {% empty %}
-        <div class="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400">
-            No posts yet. Be the first to post!
         </div>
         {% endfor %}
     </div>
 </div>
+{% endif %}
+
+<style>
+    .post-comments::-webkit-scrollbar { width: 6px; }
+    .post-comments::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 999px; }
+    .post-comments::-webkit-scrollbar-track { background: transparent; }
+    #post-modal.flex { display: flex; }
+</style>
+
+<script>
+    // ---------- Grid / Modal navigation ----------
+    (function () {
+        var modal = document.getElementById('post-modal');
+        if (!modal) return;
+
+        var cards = Array.prototype.slice.call(document.querySelectorAll('.post-card'));
+        var current = 0;
+
+        function pauseAllVideos() {
+            cards.forEach(function (card) {
+                var v = card.querySelector('video');
+                if (v) v.pause();
+            });
+        }
+
+        function showCard(index) {
+            cards[current].classList.add('hidden');
+            current = (index + cards.length) % cards.length;
+            cards[current].classList.remove('hidden');
+        }
+
+        window.openPost = function (index) {
+            pauseAllVideos();
+            cards[current].classList.add('hidden');
+            current = index;
+            cards[current].classList.remove('hidden');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closePost = function () {
+            pauseAllVideos();
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        };
+
+        window.postNav = function (direction) {
+            pauseAllVideos();
+            showCard(current + direction);
+        };
+
+        document.addEventListener('keydown', function (e) {
+            if (modal.classList.contains('hidden')) return;
+            if (e.key === 'Escape') closePost();
+            if (e.key === 'ArrowLeft') postNav(-1);
+            if (e.key === 'ArrowRight') postNav(1);
+        });
+    })();
+
+    // ---------- Comment count helper (keeps grid + modal in sync) ----------
+    function setCommentCount(postId, count) {
+        document.querySelectorAll(`.comment-count[data-post-id="${postId}"]`).forEach(function (el) {
+            el.textContent = count;
+        });
+    }
+
+    function bumpCommentCount(postId, delta) {
+        var el = document.querySelector(`.comment-count[data-post-id="${postId}"]`);
+        var current = el ? parseInt(el.textContent) || 0 : 0;
+        setCommentCount(postId, Math.max(0, current + delta));
+    }
+
+    // ---------- AJAX comment submission ----------
+    function submitComment(event, postId) {
+        event.preventDefault();
+
+        const form = event.target;
+        const input = form.querySelector('input[name="content"]');
+        const content = input.value.trim();
+
+        if (!content) {
+            alert("Comment cannot be empty.");
+            return;
+        }
+
+        const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+        fetch(`/comment/${postId}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams({ content: content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const commentHTML = `
+                    <div class="bg-neutral-800/60 rounded-lg p-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1 min-w-0">
+                                <span class="font-semibold text-white text-xs">${data.author_username}</span>
+                                <div class="text-neutral-200 text-sm mt-0.5">${data.content}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const commentSection = document.getElementById(`comments-${postId}`);
+                if (commentSection) {
+                    const emptyMsg = commentSection.querySelector('.empty-comments-msg');
+                    if (emptyMsg) emptyMsg.remove();
+
+                    const commentList = commentSection.querySelector('.space-y-2.mt-1');
+                    if (commentList) {
+                        commentList.insertAdjacentHTML('beforeend', commentHTML);
+                        commentSection.scrollTop = commentSection.scrollHeight;
+                    }
+                }
+
+                input.value = "";
+                bumpCommentCount(postId, 1);
+            } else {
+                alert(data.message || "Unable to post comment.");
+            }
+        })
+        .catch(error => {
+            console.error("Submit comment error:", error);
+            alert("Something went wrong.");
+        });
+    }
+
+    // ---------- WebSocket live comment-count updates ----------
+    function connectPostWebSocket(postId) {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const socket = new WebSocket(`${protocol}://${window.location.host}/ws/post/${postId}/`);
+
+        socket.onopen = function () {
+            console.log("WebSocket connected:", postId);
+        };
+
+        socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            console.log("WebSocket received:", data);
+
+            if (data.type === "comment_update") {
+                bumpCommentCount(postId, 1);
+            }
+
+            if (data.type === "comment_deleted") {
+                bumpCommentCount(postId, -1);
+            }
+        };
+
+        socket.onclose = function () {
+            console.log("WebSocket disconnected:", postId);
+        };
+
+        socket.onerror = function (error) {
+            console.error("WebSocket error:", error);
+        };
+
+        return socket;
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.post-card').forEach(function (card) {
+            const postId = card.getAttribute('data-post-id');
+            if (postId) {
+                connectPostWebSocket(postId);
+            }
+        });
+    });
+</script>
 {% endblock %}

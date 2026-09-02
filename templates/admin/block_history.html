@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Block History</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: auto;
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filters input {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .filters button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .filters button:hover {
+            background: #5568d3;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            color: #333;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-badge.active {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-badge.inactive {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .reason-cell {
+            color: #666;
+            font-size: 13px;
+            max-width: 300px;
+        }
+        
+        .link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .link:hover {
+            text-decoration: underline;
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 0;
+        }
+        
+        .timeline-item {
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .timeline-item.active {
+            border-left-color: #f56565;
+        }
+        
+        .timeline-item.inactive {
+            border-left-color: #48bb78;
+        }
+        
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .timeline-header h3 {
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .timeline-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .timeline-status.active {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .timeline-status.inactive {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .timeline-meta {
+            font-size: 13px;
+            color: #666;
+            margin: 8px 0;
+        }
+        
+        .timeline-reason {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #333;
+        }
+        
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .pagination a,
+        .pagination span {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #667eea;
+        }
+        
+        .pagination .current {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: #999;
+        }
+        
+        .empty-state h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .view-mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .view-btn {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #666;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .view-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .timeline-view {
+            display: none;
+        }
+        
+        .timeline-view.active {
+            display: block;
+        }
+        
+        .table-view {
+            display: none;
+        }
+        
+        .table-view.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'admin_dashboard' %}" class="back-link">← Back to Dashboard</a>
+        
+        <div class="header">
+            <h1>📋 Block/Unblock History</h1>
+            <div class="view-mode-toggle">
+                <button class="view-btn active" onclick="switchView('table')">📊 Table View</button>
+                <button class="view-btn" onclick="switchView('timeline')">📜 Timeline View</button>
+            </div>
+        </div>
+        
+        <div class="header">
+            <div class="filters">
+                <form method="GET" style="display: flex; gap: 15px; width: 100%; flex-wrap: wrap;">
+                    <input type="text" name="search" placeholder="Search by username, email, or blocker..." value="{{ search_query }}" style="flex: 1; min-width: 250px;">
+                    <button type="submit">🔍 Search</button>
+                </form>
+            </div>
+        </div>
+        
+        {% if block_records %}
+        
+        <!-- Table View -->
+        <div class="table-view active">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Blocked By</th>
+                            <th>Date</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Unblocked</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in block_records %}
+                        <tr>
+                            <td><strong>{{ record.user.username }}</strong></td>
+                            <td><a href="{% url 'admin_user_detail' record.blocked_by.id %}" class="link">{{ record.blocked_by.username }}</a></td>
+                            <td>{{ record.blocked_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <div class="reason-cell">{{ record.reason|default:"No reason provided" }}</div>
+                            </td>
+                            <td>
+                                {% if record.is_active %}
+                                    <span class="status-badge active">🔒 ACTIVE</span>
+                                {% else %}
+                                    <span class="status-badge inactive">✓ Unblocked</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.unblocked_at %}
+                                    {{ record.unblocked_at|date:"M d, Y H:i" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Timeline View -->
+        <div class="timeline-view">
+            <div class="timeline">
+                {% for record in block_records %}
+                <div class="timeline-item {% if record.is_active %}active{% else %}inactive{% endif %}">
+                    <div class="timeline-header">
+                        <h3>{{ record.user.username }}</h3>
+                        {% if record.is_active %}
+                            <span class="timeline-status active">🔒 ACTIVE BLOCK</span>
+                        {% else %}
+                            <span class="timeline-status inactive">✓ UNBLOCKED</span>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-meta">
+                        <strong>Blocked by:</strong> <a href="{% url 'admin_user_detail' record.blocked_by.id %}" class="link">{{ record.blocked_by.username }}</a>
+                    </div>
+                    <div class="timeline-meta">
+                        <strong>Blocked on:</strong> {{ record.blocked_at|date:"M d, Y \a\t H:i" }}
+                    </div>
+                    {% if record.unblocked_at %}
+                    <div class="timeline-meta">
+                        <strong>Unblocked on:</strong> {{ record.unblocked_at|date:"M d, Y \a\t H:i" }}
+                    </div>
+                    {% endif %}
+                    {% if record.reason %}
+                    <div class="timeline-reason">
+                        <strong>Reason:</strong> {{ record.reason }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">← Previous</a>
+            {% endif %}
+            
+            <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Next →</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">Last</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="table-container">
+            <div class="empty-state">
+                <h3>✓ No block history</h3>
+                <p>No users have been blocked yet.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        function switchView(viewName) {
+            // Hide all views
+            document.querySelectorAll('.table-view, .timeline-view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.view-btn').forEach(el => el.classList.remove('active'));
+            
+            // Show selected view
+            if (viewName === 'table') {
+                document.querySelector('.table-view').classList.add('active');
+                document.querySelectorAll('.view-btn')[0].classList.add('active');
+            } else {
+                document.querySelector('.timeline-view').classList.add('active');
+                document.querySelectorAll('.view-btn')[1].classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

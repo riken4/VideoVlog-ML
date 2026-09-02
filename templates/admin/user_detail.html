@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>User Details</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .profile-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .profile-placeholder {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stats {
+            display: flex;
+            gap: 50px;
+            margin-top: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #777;
+        }
+
+        .info-row {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-label {
+            width: 200px;
+            font-weight: bold;
+        }
+
+        .active {
+            color: green;
+            font-weight: bold;
+        }
+
+        .inactive {
+            color: red;
+            font-weight: bold;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .post {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <a href="{% url 'admin_users' %}" class="back-btn">
+        ← Back to Users
+    </a>
+
+    <!-- PROFILE -->
+
+    <div class="card">
+
+        <div class="profile-header">
+
+            {% if user.profile_picture %}
+
+                <img
+                    src="{{ user.profile_picture.url }}"
+                    class="profile-img"
+                >
+
+            {% else %}
+
+                <div class="profile-placeholder">
+                    No Image
+                </div>
+
+            {% endif %}
+
+
+            <div>
+
+                <h1>
+                    {{ user.username }}
+                </h1>
+
+                <p>
+                    {{ user.first_name }}
+                    {{ user.last_name }}
+                </p>
+
+                <p>
+                    {{ user.email }}
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="stats">
+
+            <div class="stat">
+
+                <div class="stat-number">
+                    {{ user.get_followers_count }}
+                </div>
+
+                <div class="stat-label">
+                    Followers
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-number">
+                    {{ user.get_following_count }}
+                </div>
+
+                <div class="stat-label">
+                    Following
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-number">
+                    {{ posts.count }}
+                </div>
+
+                <div class="stat-label">
+                    Posts
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-number">
+                    {{ likes_count }}
+                </div>
+
+                <div class="stat-label">
+                    Likes
+                </div>
+
+            </div>
+
+
+            <div class="stat">
+
+                <div class="stat-number">
+                    {{ comments_count }}
+                </div>
+
+                <div class="stat-label">
+                    Comments
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ACCOUNT INFORMATION -->
+
+    <div class="card">
+
+        <h2>Account Information</h2>
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Username
+            </div>
+
+            <div>
+                {{ user.username }}
+            </div>
+
+        </div>
+
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Email
+            </div>
+
+            <div>
+                {{ user.email }}
+            </div>
+
+        </div>
+
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Location
+            </div>
+
+            <div>
+                {{ user.location|default:"Not provided" }}
+            </div>
+
+        </div>
+
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Date Joined
+            </div>
+
+            <div>
+                {{ user.date_joined|date:"M d, Y H:i" }}
+            </div>
+
+        </div>
+
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Last Login
+            </div>
+
+            <div>
+
+                {% if user.last_login %}
+                    {{ user.last_login|date:"M d, Y H:i" }}
+                {% else %}
+                    Never
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Account Status
+            </div>
+
+            <div>
+
+                {% if user.is_active %}
+
+                    <span class="active">
+                        Active
+                    </span>
+
+                {% else %}
+
+                    <span class="inactive">
+                        Inactive
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Staff Account
+            </div>
+
+            <div>
+                {{ user.is_staff|yesno:"Yes,No" }}
+            </div>
+
+        </div>
+
+
+        <div class="info-row">
+
+            <div class="info-label">
+                Superuser
+            </div>
+
+            <div>
+                {{ user.is_superuser|yesno:"Yes,No" }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- BIO -->
+
+    <div class="card">
+
+        <h2>Profile</h2>
+
+        <p>
+            {{ user.bio|default:"No bio provided." }}
+        </p>
+
+    </div>
+
+
+    <!-- POSTS -->
+
+    <div class="card">
+
+        <h2>User Posts</h2>
+
+        {% for post in posts %}
+
+            <div class="post">
+
+                <strong>
+                    {{ post.title|default:"Post" }}
+                </strong>
+
+                <p>
+                    {{ post.content }}
+                </p>
+
+                <small>
+                    {{ post.created_at|date:"M d, Y H:i" }}
+                </small>
+
+            </div>
+
+        {% empty %}
+
+            <p>
+                This user has not created any posts.
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+</body>
+</html> 

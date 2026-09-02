@@ -29,6 +29,7 @@
 {% block content %}
 <div class="relative h-screen h-dvh overflow-hidden pt-6 font-sans" id="tiktokContainer">
 
+
     <!-- Prev/Next vertical navigation controls -->
     <div class="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 flex-col gap-3 z-30">
         <button id="tiktokPrevBtn" title="Previous"
@@ -43,45 +44,6 @@
 
     <!-- Main Vertical Feed Track -->
     <div class="transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" id="tiktokTrack">
-
-        <!-- Slide 0: Create Post Modal/Card -->
-        <div class="h-screen h-dvh w-full box-border flex items-center justify-center p-4 overflow-y-auto tiktok-slide">
-            <div class="w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-6 text-white">
-                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                    <i class="fas fa-plus-circle text-red-500"></i> Create Post
-                </h2>
-                <form method="post" action="{% url 'create_post' %}" enctype="multipart/form-data">
-                    {% csrf_token %}
-
-                    <div class="flex gap-4 mb-4">
-                        {% if user.profile_picture %}
-                            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="w-12 h-12 rounded-full object-cover border border-neutral-700">
-                        {% else %}
-                            <div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                {{ user.username|first|upper }}
-                            </div>
-                        {% endif %}
-
-                        <div class="flex-1 space-y-3">
-                            <input type="text" name="title" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500" placeholder="Title (optional)">
-
-                            <textarea name="content" rows="3" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-red-500" placeholder="What's on your mind?" required></textarea>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-neutral-400 mb-1">Select Video/Media</label>
-                                <input type="file" name="video" accept="video/*" class="block w-full text-xs text-neutral-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-neutral-700 file:text-white hover:file:bg-neutral-600">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end border-t border-neutral-800 pt-3">
-                        <button type="submit" class="bg-[#fe2c55] hover:bg-[#e0264a] text-white font-bold px-6 py-2 rounded-lg text-sm transition">
-                            Post
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
 
         <!-- Feed Slides -->
         {% for post in posts %}
@@ -140,14 +102,12 @@
                     <div class="absolute bottom-4 left-4 right-16 text-white z-10 space-y-2 pointer-events-auto lg:hidden">
                         <div class="flex items-center gap-2">
                             <a href="{% url 'profile' post.author.username %}" class="font-bold text-base hover:underline drop-shadow">
-                                @{{ post.author.username }}
+                                {{ post.author.username }}
                             </a>
                             <span class="text-xs text-neutral-300">• {{ post.created_at|timesince }} ago</span>
                         </div>
 
-                        {% if post.title %}
-                            <h3 class="font-semibold text-sm drop-shadow">{{ post.title }}</h3>
-                        {% endif %}
+                        <h3 class="font-semibold text-sm drop-shadow text-white">{{ post.title }}</h3>
 
                         <p class="text-xs sm:text-sm text-neutral-200 line-clamp-2 drop-shadow">
                             {{ post.content }}
@@ -233,14 +193,10 @@
                                 <a href="{% url 'profile' post.author.username %}" class="font-bold text-white hover:underline truncate">
                                     {{ post.author.username }}
                                 </a>
-                                <span class="text-neutral-500">•</span>
-                                <button type="button" class="text-[#fe2c55] font-semibold hover:underline shrink-0">Follow</button>
                             </div>
                         </div>
 
-                        {% if post.title %}
-                            <h3 class="font-semibold text-sm text-white mb-1">{{ post.title }}</h3>
-                        {% endif %}
+                        <h3 class="font-semibold text-sm text-white mb-1">{{ post.title }}</h3>
                         <p class="text-sm text-neutral-300 leading-snug line-clamp-3">
                             {{ post.content }}
                         </p>
@@ -254,20 +210,16 @@
                             <span id="likes-count-desktop-{{ post.id }}" class="text-xs font-semibold text-neutral-300">{{ post.total_likes }}</span>
                         </button>
                         <button type="button" class="flex flex-col items-center gap-1 text-neutral-300">
-                            <i class="fas fa-comment text-xl"></i>
+                            <i class="fa-regular fa-comment"></i>
                             <span id="comments-count-desktop-{{ post.id }}" class="text-xs font-semibold text-neutral-300">{{ post.total_comments }}</span>
                         </button>
                     </div>
 
                     <!-- Desktop-only tabs -->
                     <div class="hidden lg:flex items-center gap-6 px-4 border-b border-neutral-800/80">
-                        <button type="button" id="tab-comments-{{ post.id }}" onclick="switchTab('{{ post.id }}', 'comments')"
+                        <button type="button" id="tab-comments-{{ post.id }}"
                                 class="tab-btn tab-active py-3 text-sm font-semibold">
                             Comments ({{ post.total_comments }})
-                        </button>
-                        <button type="button" id="tab-creator-{{ post.id }}" onclick="switchTab('{{ post.id }}', 'creator')"
-                                class="tab-btn py-3 text-sm font-semibold text-neutral-500">
-                            Creator videos
                         </button>
                     </div>
 
@@ -284,8 +236,19 @@
                         {% for comment in post.comments.all %}
                         <div class="bg-neutral-800/60 rounded-xl p-3 text-xs">
                             <div class="flex justify-between items-start gap-2">
+                                <!-- Comment Author Profile Picture -->
+                                <a href="{% url 'profile' comment.author.username %}" class="block w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                    {% if comment.author.profile_picture %}
+                                        <img src="{{ comment.author.profile_picture.url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                        <div class="w-full h-full bg-neutral-700 flex items-center justify-center text-white font-bold text-xs">
+                                            {{ comment.author.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                </a>
+
                                 <div class="flex-1">
-                                    <span class="font-bold text-neutral-300">@{{ comment.author.username }}</span>
+                                    <span class="font-bold text-neutral-300">{{ comment.author.username }}</span>
 
                                     <div id="comment-text-{{ comment.id }}" class="text-neutral-100 mt-1">
                                         {{ comment.content }}
@@ -293,7 +256,6 @@
 
                                     <div class="flex items-center gap-3 mt-1 text-neutral-500">
                                         <span>{{ comment.created_at|timesince }} ago</span>
-                                        <button type="button" class="hover:text-neutral-300">Reply</button>
                                     </div>
 
                                     <!-- Comment Edit Form -->
@@ -344,11 +306,6 @@
                         {% endfor %}
                     </div>
 
-                    <!-- Creator videos panel (desktop tab target) -->
-                    <div id="creator-panel-{{ post.id }}" class="hidden flex-1 overflow-y-auto custom-scrollbar px-4 py-3">
-                        <p class="text-neutral-500 text-sm text-center mt-10">More videos from this creator coming soon.</p>
-                    </div>
-
                     <!-- Comment Input -->
                     <form onsubmit="submitComment(event, {{ post.id }}); " class="border-t border-neutral-800/80 px-3 py-3 shrink-0">
                         {% csrf_token %}
@@ -364,10 +321,7 @@
                                 <input id="comment-input-{{ post.id }}" type="text" name="content"
                                        class="w-full bg-neutral-800 border border-neutral-700 rounded-full pl-4 pr-16 py-2 text-xs text-white focus:outline-none focus:border-neutral-500"
                                        placeholder="Add comment..." required>
-                                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-neutral-500 text-xs">
-                                    <button type="button" class="hover:text-neutral-300"><i class="fas fa-at"></i></button>
-                                    <button type="button" class="hover:text-neutral-300"><i class="far fa-smile"></i></button>
-                                </div>
+                                
                             </div>
                             <button type="submit" class="w-8 h-8 rounded-full bg-[#fe2c55] hover:bg-[#e0264a] text-white flex items-center justify-center transition shrink-0">
                                 <i class="fas fa-paper-plane text-xs"></i>
@@ -379,10 +333,16 @@
             </div>
         </div>
         {% empty %}
-        <div class="h-screen h-dvh w-full flex items-center justify-center tiktok-slide">
-            <div class="text-neutral-500 text-center">
-                <i class="fas fa-video-slash text-4xl mb-2"></i>
-                <p>No posts yet. Be the first to post!</p>
+        <div class="h-screen h-dvh w-full flex items-center justify-center tiktok-slide px-4">
+            <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-8 max-w-sm text-center shadow-2xl">
+                <div class="w-16 h-16 rounded-full bg-neutral-800 text-[#fe2c55] flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fas fa-video-slash"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mb-1">No Posts Yet</h3>
+                <p class="text-xs text-neutral-400 mb-5">Be the first to share something exciting with the community!</p>
+                <a href="{% url 'create_post' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#fe2c55] hover:bg-[#e0264a] text-white text-xs font-bold transition shadow-lg shadow-[#fe2c55]/20">
+                    <i class="fas fa-plus"></i> Create Post
+                </a>
             </div>
         </div>
         {% endfor %}
@@ -401,32 +361,6 @@ function toggleComments(postId) {
             el.classList.remove('flex');
             el.classList.add('hidden');
         }
-    }
-}
-
-function switchTab(postId, tab) {
-    const commentsPanel = document.getElementById(`comment-list-${postId}`);
-    const creatorPanel = document.getElementById(`creator-panel-${postId}`);
-    const commentsTab = document.getElementById(`tab-comments-${postId}`);
-    const creatorTab = document.getElementById(`tab-creator-${postId}`);
-    if (!commentsPanel || !creatorPanel || !commentsTab || !creatorTab) return;
-
-    if (tab === 'comments') {
-        commentsPanel.classList.remove('hidden');
-        commentsPanel.classList.add('block');
-        creatorPanel.classList.add('hidden');
-        creatorPanel.classList.remove('flex');
-
-        commentsTab.classList.add('tab-active');
-        creatorTab.classList.remove('tab-active');
-    } else {
-        creatorPanel.classList.remove('hidden');
-        creatorPanel.classList.add('flex');
-        commentsPanel.classList.add('hidden');
-        commentsPanel.classList.remove('block');
-
-        creatorTab.classList.add('tab-active');
-        commentsTab.classList.remove('tab-active');
     }
 }
 
@@ -663,6 +597,23 @@ document.addEventListener("DOMContentLoaded", function () {
         let interval = null;
         const postId = video.dataset.postId;
 
+        const sendWatchUpdate = () => {
+            const curTime = Math.floor(video.currentTime || 0);
+            if (curTime > 0) {
+                fetch("/watch/update/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({
+                        post_id: postId,
+                        duration: curTime
+                    })
+                }).catch(() => {});
+            }
+        };
+
         video.addEventListener("play", function () {
             pauseAllVideos(video);
             fetch("/watch/start/", {
@@ -672,23 +623,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     "X-CSRFToken": "{{ csrf_token }}"
                 },
                 body: JSON.stringify({ post_id: postId })
-            });
+            }).catch(() => {});
 
             if (interval) clearInterval(interval);
-
-            interval = setInterval(function () {
-                fetch("/watch/update/", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": "{{ csrf_token }}"
-                    },
-                    body: JSON.stringify({
-                        post_id: postId,
-                        duration: Math.floor(video.currentTime)
-                    })
-                });
-            }, 5000);
+            interval = setInterval(sendWatchUpdate, 3000);
         });
 
         video.addEventListener("pause", function () {
@@ -696,9 +634,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 clearInterval(interval);
                 interval = null;
             }
+            sendWatchUpdate();
         });
 
         video.addEventListener("ended", function () {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            sendWatchUpdate();
             fetch("/watch/complete/", {
                 method: "POST",
                 headers: {
@@ -706,7 +650,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     "X-CSRFToken": "{{ csrf_token }}"
                 },
                 body: JSON.stringify({ post_id: postId })
-            });
+            }).catch(() => {});
         });
     });
 
@@ -775,6 +719,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         setTimeout(() => { wheelLocked = false; }, 500);
     }, { passive: false });
+
+    // Initialize WebSocket connections for all posts (real-time updates)
+    document.querySelectorAll(".post-card").forEach(function (card) {
+        const postId = card.dataset.postId;
+        if (postId) {
+            connectPostWebSocket(postId);
+        }
+    });
 });
 function deleteComment(event, form) {
     event.preventDefault();
@@ -987,6 +939,52 @@ function connectPostWebSocket(postId) {
 
             if (comment) {
                 comment.remove();
+            }
+
+            // Update comment count
+            const mobileLikeBtn = document.getElementById(`comments-count-${postId}`);
+            const desktopLikeBtn = document.getElementById(`comments-count-desktop-${postId}`);
+            const tab = document.getElementById(`tab-comments-${postId}`);
+
+            if (mobileLikeBtn) {
+                const count = Math.max(0, parseInt(mobileLikeBtn.textContent) - 1);
+                mobileLikeBtn.textContent = count;
+            }
+
+            if (desktopLikeBtn) {
+                const count = mobileLikeBtn ? mobileLikeBtn.textContent : "0";
+                desktopLikeBtn.textContent = count;
+            }
+
+            if (tab) {
+                const count = mobileLikeBtn ? mobileLikeBtn.textContent : "0";
+                tab.textContent = `Comments (${count})`;
+            }
+        }
+
+        // -------------------------
+        // COMMENT POSTED (Real-time count update)
+        // -------------------------
+
+        if (data.type === "comment_update") {
+
+            const mobileLikeBtn = document.getElementById(`comments-count-${postId}`);
+            const desktopLikeBtn = document.getElementById(`comments-count-desktop-${postId}`);
+            const tab = document.getElementById(`tab-comments-${postId}`);
+
+            if (mobileLikeBtn) {
+                const count = parseInt(mobileLikeBtn.textContent) + 1;
+                mobileLikeBtn.textContent = count;
+            }
+
+            if (desktopLikeBtn) {
+                const count = mobileLikeBtn ? mobileLikeBtn.textContent : "0";
+                desktopLikeBtn.textContent = count;
+            }
+
+            if (tab) {
+                const count = mobileLikeBtn ? mobileLikeBtn.textContent : "0";
+                tab.textContent = `Comments (${count})`;
             }
         }
     };

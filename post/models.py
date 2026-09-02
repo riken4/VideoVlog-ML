@@ -1,8 +1,5 @@
 from django.db import models
-from accounts.models import CustomUser
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from accounts.models import Follow
+from accounts.models import CustomUser, Follow
 # Create your models here.
 
 class Post(models.Model):
@@ -91,12 +88,6 @@ class Notification(models.Model):
         return f"{self.notification_type}"
     
 
-# notifications
-@receiver(post_save,sender=Follow)
-def create_follow_notification(sender,instance,created,**kwargs):
-    if created:
-        Notification.objects.create(recipient=instance.following,sender=instance.follower,notification_type='follow')
-        
 class WatchHistory(models.Model):
     user = models.ForeignKey(
         CustomUser,
